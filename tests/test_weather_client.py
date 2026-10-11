@@ -1,7 +1,5 @@
 import json
 from datetime import date, datetime, timezone
-from zoneinfo import ZoneInfo
-
 import pytest
 
 from karuvottam.data_access import DataAccess
@@ -211,7 +209,6 @@ def test_ingestion_is_idempotent_and_retains_raw_reference(tmp_path):
         client,
         data_access,
         RawWeatherPayloadStore(tmp_path / 'raw'),
-        ZoneInfo('Asia/Kolkata'),
     )
     request = {
         'location_id': location.id,
@@ -242,7 +239,77 @@ def test_ingestion_is_idempotent_and_retains_raw_reference(tmp_path):
         for record in records
     )
     assert records[0].observed_at_local == '2025-07-01T05:30:00+05:30'
+    assert records[0].observed_at_utc == '2025-07-01T00:00:00Z'
+    assert (
+        records[0].precipitation_interval_start_utc
+        == '2025-06-30T23:00:00Z'
+    )
+    assert records[0].precipitation_interval_end_utc == '2025-07-01T00:00:00Z'
+    assert records[0].precipitation_interval_minutes == 60
     assert records[0].quality_flag == 'unvalidated_reanalysis'
+
+
+@pytest.mark.parametrize(
+    'timestamps, message',
+    [
+        (['2025-07-01T00:30', '2025-07-01T01:30'], 'exact hour'),
+        (['2025-07-01T00:00+05:30', '2025-07-01T01:00+05:30'], 'must be UTC'),
+        (['2025-07-01T00:00', '2025-07-01T02:00'], 'consecutive'),
+        (['2025-07-01T00:00', '2025-07-01T00:00'], 'consecutive'),
+    ],
+)
+def test_provider_hour_labels_must_be_consecutive_exact_utc_hours(
+    timestamps, message
+):
+    transport = FakeTransport(
+        [_response(body=_payload(array_overrides={'time': timestamps}))]
+    )
+
+    with pytest.raises(WeatherResponseError, match=message):
+        _fetch(_client(transport))
+
+
+def test_local_timestamp_uses_the_persisted_location_timezone(tmp_path):
+    database_path = tmp_path / 'karuvottam.sqlite3'
+    migrate_database(database_path)
+    data_access = DataAccess(database_path)
+    with data_access.transaction() as work:
+        location = work.locations.add(
+            name='Target',
+            latitude=9.9040188,
+            longitude=77.8860417,
+            elevation_m=0,
+            timezone_name='Asia/Kolkata',
+        )
+    body = _payload(
+        array_overrides={
+            'time': ['2025-06-30T18:00Z', '2025-06-30T19:00Z'],
+        }
+    )
+    service = WeatherIngestionService(
+        _client(FakeTransport([_response(body=body)])),
+        data_access,
+        RawWeatherPayloadStore(tmp_path / 'raw'),
+    )
+
+    service.ingest(
+        location_id=location.id,
+        latitude=location.latitude,
+        longitude=location.longitude,
+        start_date=date(2025, 7, 1),
+        end_date=date(2025, 7, 2),
+    )
+
+    with data_access.transaction() as work:
+        records = work.weather_observations.list_between(
+            location.id,
+            datetime(2025, 6, 30, 18, tzinfo=timezone.utc),
+            datetime(2025, 6, 30, 19, tzinfo=timezone.utc),
+        )
+    assert [record.observed_at_local for record in records] == [
+        '2025-06-30T23:30:00+05:30',
+        '2025-07-01T00:30:00+05:30',
+    ]
 
 
 def test_request_rejects_dates_outside_expected_era5_availability():

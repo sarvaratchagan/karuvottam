@@ -48,7 +48,6 @@ WEATHER_INGESTION_SERVICE = WeatherIngestionService(
     WEATHER_CLIENT,
     DATA_ACCESS,
     RawWeatherPayloadStore(settings.weather_raw_data_dir),
-    settings.timezone,
 )
 app.extensions['data_access'] = DATA_ACCESS
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC

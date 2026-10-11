@@ -39,8 +39,9 @@ SQLite stores application timestamps as ISO-8601 `TEXT`:
   `2026-07-01T06:00:00+05:30`.
 - Date-only periods use `YYYY-MM-DD`.
 
-The ingestion/data-access layers must normalize values before insertion. SQLite does
-not enforce the complete ISO-8601 grammar itself.
+The ingestion/data-access layers normalize values before insertion and verify that a
+weather row's UTC and local timestamps represent the same instant. SQLite does not
+enforce the complete ISO-8601 grammar itself.
 
 ## Initial schema
 
@@ -48,6 +49,10 @@ Migration `001_initial.sql` creates the project-plan tables for locations, calen
 rules, lunar events, Karuvottam windows, weather observations, prediction runs and
 outputs, validation, weather events and tracks, climate indices, historical rainfall,
 event impact assessments, and audit history.
+
+Migration `002_weather_time_intervals.sql` adds the preceding-hour precipitation
+interval start, end, and duration to weather observations. Existing ERA5 rows are
+backfilled; records from sources with unknown accumulation semantics remain null.
 
 Weather observations enforce the project identity key:
 

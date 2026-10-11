@@ -34,8 +34,8 @@ def test_initial_migration_creates_every_planned_table(tmp_path):
 
     result = migrate_database(database_path)
 
-    assert result.applied_versions == (1,)
-    assert result.current_version == 1
+    assert result.applied_versions == (1, 2)
+    assert result.current_version == 2
     with connect_database(database_path) as connection:
         tables = {
             row['name']
@@ -44,17 +44,20 @@ def test_initial_migration_creates_every_planned_table(tmp_path):
             )
             if not row['name'].startswith('sqlite_')
         }
-        migration = connection.execute(
+        migrations = connection.execute(
             'SELECT version, name, length(checksum) AS checksum_length '
-            'FROM schema_migrations'
-        ).fetchone()
+            'FROM schema_migrations ORDER BY version'
+        ).fetchall()
 
     assert tables == EXPECTED_TABLES
-    assert dict(migration) == {
-        'version': 1,
-        'name': 'initial',
-        'checksum_length': 64,
-    }
+    assert [dict(migration) for migration in migrations] == [
+        {'version': 1, 'name': 'initial', 'checksum_length': 64},
+        {
+            'version': 2,
+            'name': 'weather_time_intervals',
+            'checksum_length': 64,
+        },
+    ]
 
 
 def test_migration_is_idempotent_and_data_survives_reopen(tmp_path):
@@ -76,8 +79,75 @@ def test_migration_is_idempotent_and_data_survives_reopen(tmp_path):
         stored_name = connection.execute('SELECT name FROM locations').fetchone()['name']
 
     assert second_result.applied_versions == ()
-    assert second_result.current_version == 1
+    assert second_result.current_version == 2
     assert stored_name == 'Test location'
+
+
+def test_weather_interval_migration_adds_columns(tmp_path):
+    database_path = tmp_path / 'karuvottam.sqlite3'
+    migrate_database(database_path)
+
+    with connect_database(database_path) as connection:
+        columns = {
+            row['name'] for row in connection.execute('PRAGMA table_info(weather_observations)')
+        }
+
+    assert {
+        'precipitation_interval_start_utc',
+        'precipitation_interval_end_utc',
+        'precipitation_interval_minutes',
+    } <= columns
+
+
+def test_weather_interval_migration_backfills_existing_era5_rows(tmp_path):
+    source_directory = Path(__file__).parents[1] / 'karuvottam' / 'migrations'
+    migration_directory = tmp_path / 'migrations'
+    migration_directory.mkdir()
+    (migration_directory / '001_initial.sql').write_bytes(
+        (source_directory / '001_initial.sql').read_bytes()
+    )
+    database_path = tmp_path / 'karuvottam.sqlite3'
+    migrate_database(database_path, migration_directory)
+
+    with connect_database(database_path) as connection:
+        location_id = connection.execute(
+            """
+            INSERT INTO locations (name, latitude, longitude, timezone)
+            VALUES ('Target', 9.9, 77.8, 'Asia/Kolkata')
+            """
+        ).lastrowid
+        connection.execute(
+            """
+            INSERT INTO weather_observations (
+                location_id, observed_at_utc, observed_at_local, source, quality_flag
+            ) VALUES (?, '2025-07-01T00:00:00Z',
+                      '2025-07-01T05:30:00+05:30',
+                      'open-meteo:era5', 'unvalidated_reanalysis')
+            """,
+            (location_id,),
+        )
+        connection.commit()
+
+    (migration_directory / '002_weather_time_intervals.sql').write_bytes(
+        (source_directory / '002_weather_time_intervals.sql').read_bytes()
+    )
+    result = migrate_database(database_path, migration_directory)
+
+    with connect_database(database_path) as connection:
+        row = connection.execute(
+            """
+            SELECT precipitation_interval_start_utc,
+                   precipitation_interval_end_utc,
+                   precipitation_interval_minutes
+            FROM weather_observations
+            """
+        ).fetchone()
+    assert result.applied_versions == (2,)
+    assert dict(row) == {
+        'precipitation_interval_start_utc': '2025-06-30T23:00:00Z',
+        'precipitation_interval_end_utc': '2025-07-01T00:00:00Z',
+        'precipitation_interval_minutes': 60,
+    }
 
 
 def test_foreign_keys_and_weather_observation_uniqueness_are_enforced(tmp_path):

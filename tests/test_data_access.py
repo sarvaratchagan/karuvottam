@@ -178,6 +178,7 @@ def test_weather_observations_are_normalized_and_queryable(data_access):
             timezone_name='Asia/Kolkata',
         )
         observed_local = datetime(2026, 1, 1, 6, 30, tzinfo=LOCAL_TIMEZONE)
+        interval_end = observed_local.astimezone(timezone.utc)
         stored = work.weather_observations.add(
             WeatherObservation(
                 location_id=location.id,
@@ -193,6 +194,9 @@ def test_weather_observations_are_normalized_and_queryable(data_access):
                 source='provider-a',
                 quality_flag='verified',
                 raw_payload_reference='payload/1',
+                precipitation_interval_start_utc=interval_end - timedelta(hours=1),
+                precipitation_interval_end_utc=interval_end,
+                precipitation_interval_minutes=60,
             )
         )
 
@@ -207,6 +211,9 @@ def test_weather_observations_are_normalized_and_queryable(data_access):
     assert results == (stored,)
     assert stored.observed_at_utc == '2026-01-01T01:00:00Z'
     assert stored.observed_at_local == '2026-01-01T06:30:00+05:30'
+    assert stored.precipitation_interval_start_utc == '2026-01-01T00:00:00Z'
+    assert stored.precipitation_interval_end_utc == '2026-01-01T01:00:00Z'
+    assert stored.precipitation_interval_minutes == 60
     assert stored.is_interpolated is False
 
 
@@ -238,3 +245,75 @@ def test_naive_observation_timestamp_rolls_back(data_access):
             datetime(2026, 1, 1, tzinfo=timezone.utc),
             datetime(2026, 1, 2, tzinfo=timezone.utc),
         ) == ()
+
+
+def test_weather_timestamp_representations_must_be_consistent(data_access):
+    with data_access.transaction() as work:
+        location = work.locations.add(
+            name='Target',
+            latitude=9.9,
+            longitude=77.8,
+            elevation_m=0,
+            timezone_name='Asia/Kolkata',
+        )
+
+    with pytest.raises(ValueError, match='same instant'):
+        with data_access.transaction() as work:
+            work.weather_observations.add(
+                WeatherObservation(
+                    location_id=location.id,
+                    observed_at_utc=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                    observed_at_local=datetime(
+                        2026, 1, 1, 6, 30, tzinfo=LOCAL_TIMEZONE
+                    ),
+                    source='provider-a',
+                    quality_flag='unknown',
+                )
+            )
+
+
+@pytest.mark.parametrize(
+    'start, end, minutes, message',
+    [
+        (None, datetime(2026, 1, 1, tzinfo=timezone.utc), 60, 'provided together'),
+        (
+            datetime(2025, 12, 31, 23, tzinfo=timezone.utc),
+            datetime(2026, 1, 1, 1, tzinfo=timezone.utc),
+            60,
+            'end must equal',
+        ),
+        (
+            datetime(2025, 12, 31, 22, tzinfo=timezone.utc),
+            datetime(2026, 1, 1, tzinfo=timezone.utc),
+            60,
+            'duration does not match',
+        ),
+    ],
+)
+def test_precipitation_interval_is_validated(
+    data_access, start, end, minutes, message
+):
+    with data_access.transaction() as work:
+        location = work.locations.add(
+            name='Target',
+            latitude=9.9,
+            longitude=77.8,
+            elevation_m=0,
+            timezone_name='Asia/Kolkata',
+        )
+
+    observed = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    with pytest.raises(ValueError, match=message):
+        with data_access.transaction() as work:
+            work.weather_observations.add(
+                WeatherObservation(
+                    location_id=location.id,
+                    observed_at_utc=observed,
+                    observed_at_local=observed.astimezone(LOCAL_TIMEZONE),
+                    source='provider-a',
+                    quality_flag='unknown',
+                    precipitation_interval_start_utc=start,
+                    precipitation_interval_end_utc=end,
+                    precipitation_interval_minutes=minutes,
+                )
+            )

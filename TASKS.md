@@ -46,7 +46,7 @@ Derived from `PROJECT_PLAN.md` (version 1.1).
 |---|---|---:|---|---|---|---|
 | T2.1 | Evaluate and select a historical weather provider | P1 | T1.5 | Done | Unassigned | Hourly precipitation, temperature, humidity, cloud, wind, and optional pressure coverage is confirmed for the target location; limits, licensing, gaps, and timestamp semantics are documented |
 | T2.2 | Build the weather-data client | P1 | T2.1, T3.1, T3.3 | Done | Unassigned | Data can be fetched by location/time range; retries handle timeout/rate/API errors; source/raw reference is retained; repeated ingestion is idempotent |
-| T2.3 | Normalize timestamps and accumulation periods | P1 | T2.1 | Todo | Unassigned | UTC and local timestamps are stored consistently; provider-hour meaning and precipitation accumulation interval are documented and covered by tests |
+| T2.3 | Normalize timestamps and accumulation periods | P1 | T2.1 | Done | Unassigned | UTC and local timestamps are stored consistently; provider-hour meaning and precipitation accumulation interval are documented and covered by tests |
 | T2.4 | Implement data-quality validation | P1 | T2.2, T2.3 | Todo | Unassigned | Range, missingness, duplication, and interpolation checks produce a per-record flag plus a window-level quality report |
 | T2.5 | Implement CSV import and export | P2 | T2.4, T3.2 | Todo | Unassigned | Required columns/formats are documented; import supports preview and reports bad rows; UTF-8 Tamil data round-trips; exports are verified |
 

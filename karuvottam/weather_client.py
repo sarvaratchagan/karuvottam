@@ -16,7 +16,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from uuid import uuid4
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import certifi
 
@@ -121,6 +121,7 @@ class WeatherFetch:
     utc_offset_seconds: int
     hourly_units: Mapping[str, str]
     hourly: Mapping[str, list[object]]
+    hourly_timestamps_utc: tuple[datetime, ...]
     raw_payload: bytes
     payload_sha256: str
 
@@ -167,6 +168,36 @@ def _retry_after_seconds(headers: Mapping[str, str]) -> float | None:
     except ValueError:
         return None
     return max(0.0, min(value, MAX_RETRY_DELAY_SECONDS))
+
+
+def _normalize_hourly_timestamps(values: Sequence[object]) -> tuple[datetime, ...]:
+    """Interpret provider labels as consecutive UTC hour-ending timestamps."""
+    normalized: list[datetime] = []
+    for value in values:
+        if not isinstance(value, str):
+            raise WeatherResponseError('hourly timestamp must be a string')
+        iso_value = value[:-1] + '+00:00' if value.endswith('Z') else value
+        try:
+            parsed = datetime.fromisoformat(iso_value)
+        except ValueError as exc:
+            raise WeatherResponseError(
+                f'invalid hourly timestamp: {value!r}'
+            ) from exc
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        elif parsed.utcoffset() != timedelta(0):
+            raise WeatherResponseError('provider hourly timestamps must be UTC')
+        parsed = parsed.astimezone(timezone.utc)
+        if parsed.minute or parsed.second or parsed.microsecond:
+            raise WeatherResponseError(
+                'provider hourly timestamps must fall on an exact hour'
+            )
+        if normalized and parsed - normalized[-1] != timedelta(hours=1):
+            raise WeatherResponseError(
+                'provider hourly timestamps must be consecutive and increasing'
+            )
+        normalized.append(parsed)
+    return tuple(normalized)
 
 
 class OpenMeteoHistoricalClient:
@@ -370,6 +401,7 @@ class OpenMeteoHistoricalClient:
                 raise WeatherResponseError('hourly arrays have different lengths')
         if not expected_length:
             raise WeatherResponseError('provider returned no hourly records')
+        hourly_timestamps_utc = _normalize_hourly_timestamps(hourly['time'])
 
         retrieved_at = self.now().astimezone(timezone.utc)
         digest = hashlib.sha256(body).hexdigest()
@@ -391,6 +423,7 @@ class OpenMeteoHistoricalClient:
             utc_offset_seconds=utc_offset_seconds,
             hourly_units=units,
             hourly=hourly,
+            hourly_timestamps_utc=hourly_timestamps_utc,
             raw_payload=body,
             payload_sha256=digest,
         )
@@ -463,12 +496,10 @@ class WeatherIngestionService:
         client: OpenMeteoHistoricalClient,
         data_access: DataAccess,
         raw_store: RawWeatherPayloadStore,
-        local_timezone: ZoneInfo,
     ) -> None:
         self.client = client
         self.data_access = data_access
         self.raw_store = raw_store
-        self.local_timezone = local_timezone
 
     def ingest(
         self,
@@ -486,12 +517,24 @@ class WeatherIngestionService:
             end_date=end_date,
         )
         artifact = self.raw_store.save(fetched)
-        observations = self._observations(fetched, location_id, artifact.reference)
         inserted = 0
         existing = 0
         with self.data_access.transaction() as work:
-            if work.locations.get(location_id) is None:
+            location = work.locations.get(location_id)
+            if location is None:
                 raise ValueError(f'unknown location_id: {location_id}')
+            try:
+                local_timezone = ZoneInfo(location.timezone_name)
+            except ZoneInfoNotFoundError as exc:
+                raise ValueError(
+                    f'location {location_id} has an unavailable timezone'
+                ) from exc
+            observations = self._observations(
+                fetched,
+                location_id,
+                artifact.reference,
+                local_timezone,
+            )
             for observation in observations:
                 _, created = work.weather_observations.add_if_absent(observation)
                 if created:
@@ -514,27 +557,18 @@ class WeatherIngestionService:
         fetched: WeatherFetch,
         location_id: int,
         raw_payload_reference: str,
+        local_timezone: ZoneInfo,
     ) -> tuple[WeatherObservation, ...]:
         hourly = fetched.hourly
         source = f'{fetched.provider_key}:{fetched.model}'
         observations = []
-        for index, timestamp in enumerate(hourly['time']):
-            if not isinstance(timestamp, str):
-                raise WeatherResponseError('hourly timestamp must be a string')
-            try:
-                observed_utc = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            except ValueError as exc:
-                raise WeatherResponseError(
-                    f'invalid hourly timestamp: {timestamp!r}'
-                ) from exc
-            if observed_utc.tzinfo is None:
-                observed_utc = observed_utc.replace(tzinfo=timezone.utc)
-            observed_utc = observed_utc.astimezone(timezone.utc)
+        for index, observed_utc in enumerate(fetched.hourly_timestamps_utc):
+            precipitation_interval_start = observed_utc - timedelta(hours=1)
             observations.append(
                 WeatherObservation(
                     location_id=location_id,
                     observed_at_utc=observed_utc,
-                    observed_at_local=observed_utc.astimezone(self.local_timezone),
+                    observed_at_local=observed_utc.astimezone(local_timezone),
                     temperature_c=hourly['temperature_2m'][index],
                     relative_humidity_pct=hourly['relative_humidity_2m'][index],
                     precipitation_mm=hourly['precipitation'][index],
@@ -545,6 +579,9 @@ class WeatherIngestionService:
                     source=source,
                     quality_flag='unvalidated_reanalysis',
                     raw_payload_reference=raw_payload_reference,
+                    precipitation_interval_start_utc=precipitation_interval_start,
+                    precipitation_interval_end_utc=observed_utc,
+                    precipitation_interval_minutes=60,
                 )
             )
         return tuple(observations)
