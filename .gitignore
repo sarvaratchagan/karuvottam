@@ -1,0 +1,49 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Generated imports and exports
+data/imports/*
+data/exports/*
+!data/imports/.gitkeep
+!data/exports/.gitkeep
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+
+# IDE and operating-system files
+.agents/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*~

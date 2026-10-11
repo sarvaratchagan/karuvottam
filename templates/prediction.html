@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>மழை முன்னறிவிப்பு</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="wrap"><a class="back" href="/?year={{year}}">← முதற்பக்கம்</a>
+    <h1>{{'ஆடி' if mode=='aadi' else 'மார்கழி'}} அடிப்படையிலான {{days}} நாள் முன்னறிவிப்பு</h1>
+    <p>தொடக்க நாள்: <b>{{start}}</b></p>
+    <div class="card tablewrap">
+        <table>
+            <thead>
+            <tr>
+                <th>நாள்</th>
+                <th>தேதி</th>
+                <th>தனிப்பயன் தமிழ் தேதி</th>
+                <th>மழை நிகழ்தகவு*</th>
+                <th>தீவிரம்*</th>
+            </tr>
+            </thead>
+            <tbody>{% for r in rows %}
+            <tr>
+                <td>{{r.day}}</td>
+                <td>{{r.date}}</td>
+                <td>{{r.tamil_date}}</td>
+                <td>{{r.probability}}%</td>
+                <td>{{r.intensity}}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="foot">நாட்காட்டி விதி: {{calendar_rule.reference_label}} = சித்திரை 1;
+        பதிப்பு {{calendar_rule.version}}. இது அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல.</p>
+    <p class="foot">* MVP விளக்க மதிப்புகள் மட்டுமே. இவை அளவீடு செய்யப்பட்ட மழை நிகழ்தகவுகள் அல்ல.</p></main>
+</body>
+</html>
