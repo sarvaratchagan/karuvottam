@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator, TypeVar
 
@@ -100,6 +100,9 @@ class WeatherObservation:
     pressure_hpa: float | None = None
     is_interpolated: bool = False
     raw_payload_reference: str | None = None
+    precipitation_interval_start_utc: datetime | None = None
+    precipitation_interval_end_utc: datetime | None = None
+    precipitation_interval_minutes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -119,6 +122,9 @@ class WeatherObservationRecord:
     is_interpolated: bool
     quality_flag: str
     raw_payload_reference: str | None
+    precipitation_interval_start_utc: str | None
+    precipitation_interval_end_utc: str | None
+    precipitation_interval_minutes: int | None
 
 
 def _aware_iso(value: datetime, field_name: str) -> str:
@@ -203,10 +209,58 @@ def _weather_observation_from_row(row: sqlite3.Row) -> WeatherObservationRecord:
         is_interpolated=bool(row['is_interpolated']),
         quality_flag=row['quality_flag'],
         raw_payload_reference=row['raw_payload_reference'],
+        precipitation_interval_start_utc=row[
+            'precipitation_interval_start_utc'
+        ],
+        precipitation_interval_end_utc=row['precipitation_interval_end_utc'],
+        precipitation_interval_minutes=row['precipitation_interval_minutes'],
     )
 
 
 def _weather_observation_values(observation: WeatherObservation) -> tuple[object, ...]:
+    _aware_iso(observation.observed_at_utc, 'observed_at_utc')
+    _aware_iso(observation.observed_at_local, 'observed_at_local')
+    observed_utc = observation.observed_at_utc.astimezone(timezone.utc)
+    observed_local_as_utc = observation.observed_at_local.astimezone(timezone.utc)
+    if observed_utc != observed_local_as_utc:
+        raise ValueError(
+            'observed_at_utc and observed_at_local must represent the same instant'
+        )
+
+    interval_values = (
+        observation.precipitation_interval_start_utc,
+        observation.precipitation_interval_end_utc,
+        observation.precipitation_interval_minutes,
+    )
+    if any(value is None for value in interval_values) and any(
+        value is not None for value in interval_values
+    ):
+        raise ValueError('precipitation interval fields must be provided together')
+
+    interval_start: str | None = None
+    interval_end: str | None = None
+    if all(value is not None for value in interval_values):
+        start = observation.precipitation_interval_start_utc
+        end = observation.precipitation_interval_end_utc
+        minutes = observation.precipitation_interval_minutes
+        assert start is not None and end is not None and minutes is not None
+        _aware_iso(start, 'precipitation_interval_start_utc')
+        _aware_iso(end, 'precipitation_interval_end_utc')
+        if minutes <= 0:
+            raise ValueError('precipitation_interval_minutes must be positive')
+        start_utc = start.astimezone(timezone.utc)
+        end_utc = end.astimezone(timezone.utc)
+        if end_utc != observed_utc:
+            raise ValueError(
+                'precipitation interval end must equal observed_at_utc'
+            )
+        if end_utc - start_utc != timedelta(minutes=minutes):
+            raise ValueError(
+                'precipitation interval duration does not match its timestamps'
+            )
+        interval_start = _utc_iso(start, 'precipitation_interval_start_utc')
+        interval_end = _utc_iso(end, 'precipitation_interval_end_utc')
+
     return (
         observation.location_id,
         _utc_iso(observation.observed_at_utc, 'observed_at_utc'),
@@ -222,6 +276,9 @@ def _weather_observation_values(observation: WeatherObservation) -> tuple[object
         int(observation.is_interpolated),
         observation.quality_flag,
         observation.raw_payload_reference,
+        interval_start,
+        interval_end,
+        observation.precipitation_interval_minutes,
     )
 
 
@@ -400,8 +457,10 @@ class WeatherObservationRepository:
             location_id, observed_at_utc, observed_at_local, temperature_c,
             relative_humidity_pct, precipitation_mm, cloud_cover_pct,
             wind_speed_kmh, wind_direction_deg, pressure_hpa, source,
-            is_interpolated, quality_flag, raw_payload_reference
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            is_interpolated, quality_flag, raw_payload_reference,
+            precipitation_interval_start_utc, precipitation_interval_end_utc,
+            precipitation_interval_minutes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
 
     def __init__(self, connection: sqlite3.Connection) -> None:

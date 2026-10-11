@@ -48,8 +48,8 @@ Before ingestion, the client requires:
 - returned grid latitude/longitude and optional elevation.
 
 Null weather values remain null and are marked `unvalidated_reanalysis`; range,
-missingness, and interpolation decisions belong to T2.4. T2.3 owns the final timestamp
-and accumulation-period specification.
+missingness, and interpolation decisions belong to T2.4. Timestamp and precipitation
+interval semantics are defined in `WEATHER_TIME_SPEC.md`.
 
 ## Raw payload provenance
 
@@ -95,6 +95,7 @@ report = service.ingest(
 )
 ```
 
-The database must already be migrated and the referenced location must exist. Network
+The database must already be migrated and the referenced location must exist. Its
+persisted IANA timezone is used for `observed_at_local`. Network
 retrieval and raw archival happen before the database transaction; a database failure
 cannot leave a partial set of observation rows.

@@ -132,3 +132,4 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [கருவோட்டக் கண்காணிப்புக் காலச் சாளர விதி](docs/WINDOW_SPEC.md)
 - [வரலாற்று வானிலைத் தரவு வழங்குநர் மதிப்பீடு](docs/WEATHER_PROVIDER_EVALUATION.md)
 - [ERA5 weather client மற்றும் ingestion நடைமுறை](docs/WEATHER_INGESTION.md)
+- [Weather timestamp மற்றும் precipitation interval விதிகள்](docs/WEATHER_TIME_SPEC.md)
