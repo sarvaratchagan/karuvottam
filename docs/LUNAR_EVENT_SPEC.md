@@ -8,7 +8,7 @@
 
 ## Selection rule
 
-For a requested modified Tamil month and year:
+For Aadi of a requested modified Tamil year:
 
 1. Calculate the month's Gregorian start using the versioned modified Tamil calendar rule.
 2. Treat the start as local midnight in `Asia/Kolkata`.
@@ -19,7 +19,9 @@ For a requested modified Tamil month and year:
 
 First-quarter and third-quarter phases are not eligible trigger events. The calculation searches up to 40 days; no result or a provider failure produces an explicit unavailable state rather than a fabricated event.
 
-For Aadi, this selected lunar event is a reference event rather than the final observation trigger. The final Aadi trigger is the start of the preceding Chaturdashi tithi, as defined in [TITHI_RULE_SPEC.md](TITHI_RULE_SPEC.md). Margazhi continues to use the selected lunar event directly.
+The selected Aadi event is the final observation trigger.
+
+For Margazhi, the requested phase alternates by year rather than choosing whichever phase occurs first. The default reproducibility anchor is 2026 = new moon (Amavasai), followed by 2027 = full moon (Pournami), then alternating. The engine searches for that requested phase after Margazhi 1 and uses its exact local timestamp as the trigger.
 
 ## Definitions and implementation source
 
@@ -39,7 +41,7 @@ Integration tests compare selected 2026 events with the U.S. Naval Observatory's
 Reference examples:
 
 - Modified Aadi 2026 begins at `2026-06-21 00:00 Asia/Kolkata`; the selected event is the full moon near `2026-06-29 23:56 UTC`.
-- Modified Margazhi 2026 begins at `2026-11-21 00:00 Asia/Kolkata`; the selected event is the full moon near `2026-11-24 14:53 UTC`.
+- Modified Margazhi 2026 begins at `2026-11-21 00:00 Asia/Kolkata`; under the default alternation anchor, its selected event is the new moon near `2026-12-09 00:52 UTC`.
 
 ## Persistence boundary
 

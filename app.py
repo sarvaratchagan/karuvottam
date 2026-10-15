@@ -6,14 +6,14 @@ from config import settings
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.data_access import DataAccess
 from karuvottam.lunar_events import LunarEventEngine
-from karuvottam.sunrise import SunriseEngine
-from karuvottam.tithi import TithiEngine
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     RawWeatherPayloadStore,
     WeatherIngestionService,
 )
+from karuvottam.weather_csv import WeatherCsvService
 from karuvottam.weather_provider import selected_historical_provider
+from karuvottam.weather_quality import WeatherQualityValidator
 from karuvottam.windows import KaruvottamWindowEngine
 
 WEATHER_PROVIDER_SPEC = selected_historical_provider(
@@ -31,12 +31,16 @@ app.config.from_mapping(
     TIMEZONE=settings.timezone_name,
     CHITHIRAI_REFERENCE=settings.chithirai_reference,
     CALENDAR_RULE_VERSION=settings.calendar_rule_version,
+    MARGAZHI_ALTERNATION_ANCHOR_YEAR=settings.margazhi_alternation_anchor_year,
+    MARGAZHI_ALTERNATION_ANCHOR_PHASE=settings.margazhi_alternation_anchor_phase,
     WEATHER_PROVIDER=settings.weather_provider,
     WEATHER_MODEL=settings.weather_model,
     WEATHER_API_BASE_URL=settings.weather_api_base_url,
     DATABASE_PATH=str(settings.database_path),
 )
 DATA_ACCESS = DataAccess(settings.database_path)
+WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
+WEATHER_CSV_SERVICE = WeatherCsvService(DATA_ACCESS, WEATHER_QUALITY_VALIDATOR)
 WEATHER_CLIENT = OpenMeteoHistoricalClient(
     WEATHER_PROVIDER_SPEC,
     api_key=settings.weather_api_key,
@@ -48,10 +52,13 @@ WEATHER_INGESTION_SERVICE = WeatherIngestionService(
     WEATHER_CLIENT,
     DATA_ACCESS,
     RawWeatherPayloadStore(settings.weather_raw_data_dir),
+    WEATHER_QUALITY_VALIDATOR,
 )
 app.extensions['data_access'] = DATA_ACCESS
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC
 app.extensions['weather_client'] = WEATHER_CLIENT
+app.extensions['weather_quality_validator'] = WEATHER_QUALITY_VALIDATOR
+app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
 
 LOCATION_TIMEZONE = settings.timezone
@@ -62,18 +69,11 @@ CALENDAR_RULE = CalendarRule(
     version=settings.calendar_rule_version,
 )
 LUNAR_EVENT_ENGINE = LunarEventEngine(LOCATION_TIMEZONE)
-TITHI_ENGINE = TithiEngine(LOCATION_TIMEZONE)
-SUNRISE_ENGINE = SunriseEngine(
-    latitude=settings.latitude,
-    longitude=settings.longitude,
-    elevation_m=settings.elevation_m,
-    local_timezone=LOCATION_TIMEZONE,
-)
 WINDOW_ENGINE = KaruvottamWindowEngine(
     calendar_rule=CALENDAR_RULE,
     lunar_engine=LUNAR_EVENT_ENGINE,
-    tithi_engine=TITHI_ENGINE,
-    sunrise_engine=SUNRISE_ENGINE,
+    margazhi_anchor_year=settings.margazhi_alternation_anchor_year,
+    margazhi_anchor_phase=settings.margazhi_alternation_anchor_phase,
 )
 
 def karuvottam_window(year: int, kind: str):
@@ -148,7 +148,6 @@ def index():
         {
             'month_name': window.season_name_tamil,
             'event': window.trigger_event,
-            'sunrise': window.sunrise,
         }
         for window in (cycle['aadi_window'], cycle['margazhi_window'])
     ]

@@ -1,4 +1,6 @@
-# Local Sunrise and Four-Day Settling Rule
+# Local Sunrise and Four-Day Settling Rule (Legacy v1 Reference)
+
+> **Status:** Not used by active rule version 2.0. Active Aadi and Margazhi windows start at the exact selected lunar-event timestamp. This document remains only to explain and test the retained standalone sunrise utility and historical v1 calculations.
 
 **Calculation provider:** Astronomy Engine 2.1.19
 

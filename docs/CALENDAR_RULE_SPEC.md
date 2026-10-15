@@ -1,6 +1,6 @@
 # Modified Tamil Calendar Rule
 
-**Rule version:** 1.0
+**Rule version:** 2.0
 
 This is a project-defined computational calendar. It is not presented as the official Tamil calendar.
 
@@ -44,4 +44,4 @@ If a future reference uses a day that does not exist in a target month, that bou
 
 ## Important project consequence
 
-Under this modified rule, Aadi 1 is June 21 and Margazhi 1 is November 21 when Chithirai 1 is March 21. Existing MVP observation-window dates remain explicit placeholders until the lunar-event and sunrise engines replace them; they must not be interpreted as calendar-derived window starts.
+Under this modified rule, Aadi 1 is June 21—the project-defined day after the northward solar movement/Mithuna transition ends—and Margazhi 1 is November 21. These dates define lunar-event search boundaries; the observation begins at the exact selected new-moon or full-moon time, not at month-start midnight.

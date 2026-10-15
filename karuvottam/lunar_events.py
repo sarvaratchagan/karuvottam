@@ -14,6 +14,10 @@ from karuvottam.calendar_engine import CalendarRule
 NEW_MOON_ANGLE = 0.0
 FULL_MOON_ANGLE = 180.0
 DEFAULT_SEARCH_DAYS = 40.0
+PHASE_ANGLES = {
+    'new_moon': NEW_MOON_ANGLE,
+    'full_moon': FULL_MOON_ANGLE,
+}
 
 
 class LunarEventUnavailable(RuntimeError):
@@ -130,6 +134,48 @@ class LunarEventEngine:
             calculation_version=self.provider.calculation_version,
         )
 
+    def first_phase_after(
+        self,
+        start_local: datetime,
+        event_type: str,
+    ) -> LunarEvent:
+        """Return the first requested principal lunar phase after a local instant."""
+        if start_local.tzinfo is None or start_local.utcoffset() is None:
+            raise ValueError('start_local must be timezone-aware')
+        try:
+            phase_angle = PHASE_ANGLES[event_type]
+        except KeyError as exc:
+            raise ValueError(f'unsupported lunar event type: {event_type}') from exc
+
+        start_utc = start_local.astimezone(timezone.utc)
+        try:
+            event_time = self.provider.search_phase(
+                phase_angle,
+                start_utc,
+                DEFAULT_SEARCH_DAYS,
+            )
+        except Exception as exc:
+            raise LunarEventUnavailable('lunar phase provider failed') from exc
+
+        if event_time is None:
+            raise LunarEventUnavailable(
+                f'no {event_type} found within {DEFAULT_SEARCH_DAYS:g} days'
+            )
+        if event_time.tzinfo is None or event_time.utcoffset() is None:
+            raise LunarEventUnavailable('lunar phase provider returned a naive timestamp')
+        event_utc = event_time.astimezone(timezone.utc)
+        if event_utc <= start_utc:
+            raise LunarEventUnavailable(
+                f'lunar phase provider returned {event_type} before search start'
+            )
+        return LunarEvent(
+            event_type=event_type,
+            event_datetime_utc=event_utc,
+            event_datetime_local=event_utc.astimezone(self.local_timezone),
+            source=self.provider.source,
+            calculation_version=self.provider.calculation_version,
+        )
+
     def first_event_for_tamil_month(
         self,
         tamil_year: int,
@@ -143,3 +189,19 @@ class LunarEventEngine:
             tzinfo=self.local_timezone,
         )
         return self.first_new_or_full_after(start_local)
+
+    def phase_for_tamil_month(
+        self,
+        tamil_year: int,
+        tamil_month: int,
+        calendar_rule: CalendarRule,
+        event_type: str,
+    ) -> LunarEvent:
+        """Return the requested phase after the configured Tamil month begins."""
+        month_start = calendar_rule.to_gregorian(tamil_year, tamil_month, 1)
+        start_local = datetime.combine(
+            month_start,
+            time.min,
+            tzinfo=self.local_timezone,
+        )
+        return self.first_phase_after(start_local, event_type)

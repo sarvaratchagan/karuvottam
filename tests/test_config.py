@@ -13,7 +13,9 @@ def test_default_settings_match_project_plan():
     assert settings.elevation_m == 0
     assert settings.timezone == ZoneInfo('Asia/Kolkata')
     assert settings.chithirai_reference_parts == (3, 21)
-    assert settings.calendar_rule_version == '1.0'
+    assert settings.calendar_rule_version == '2.0'
+    assert settings.margazhi_alternation_anchor_year == 2026
+    assert settings.margazhi_alternation_anchor_phase == 'new_moon'
     assert settings.weather_provider == 'open-meteo'
     assert settings.weather_model == 'era5'
     assert settings.weather_api_key is None
@@ -35,6 +37,8 @@ def test_environment_overrides_are_applied():
             'KARUVOTTAM_TIMEZONE': 'UTC',
             'KARUVOTTAM_CHITHIRAI_REFERENCE': '03-22',
             'KARUVOTTAM_CALENDAR_RULE_VERSION': '2.0',
+            'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_YEAR': '2028',
+            'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_PHASE': 'full_moon',
             'KARUVOTTAM_WEATHER_PROVIDER': 'test-provider',
             'KARUVOTTAM_WEATHER_MODEL': 'test-model',
             'KARUVOTTAM_WEATHER_API_BASE_URL': 'https://example.test/weather',
@@ -55,6 +59,8 @@ def test_environment_overrides_are_applied():
     assert settings.timezone_name == 'UTC'
     assert settings.chithirai_reference_parts == (3, 22)
     assert settings.calendar_rule_version == '2.0'
+    assert settings.margazhi_alternation_anchor_year == 2028
+    assert settings.margazhi_alternation_anchor_phase == 'full_moon'
     assert settings.weather_provider == 'test-provider'
     assert settings.weather_model == 'test-model'
     assert settings.weather_api_base_url == 'https://example.test/weather'
@@ -80,6 +86,12 @@ def test_environment_overrides_are_applied():
         ('KARUVOTTAM_WEATHER_TIMEOUT_SECONDS', '0', 'greater than zero'),
         ('KARUVOTTAM_WEATHER_RETRY_ATTEMPTS', '0', 'at least 1'),
         ('KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS', '-1', 'must not be negative'),
+        ('KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_YEAR', '0', 'must be positive'),
+        (
+            'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_PHASE',
+            'quarter_moon',
+            'new_moon or full_moon',
+        ),
         ('KARUVOTTAM_PORT', 'zero', 'must be an integer'),
         ('KARUVOTTAM_PORT', '70000', 'between 1 and 65535'),
     ],

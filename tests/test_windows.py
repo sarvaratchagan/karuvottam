@@ -1,23 +1,21 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
 
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.lunar_events import LunarEvent, LunarEventUnavailable
-from karuvottam.sunrise import SunriseResult, SunriseUnavailable
-from karuvottam.tithi import TithiBoundary, TithiUnavailable
 from karuvottam.windows import KaruvottamWindowEngine, WindowUnavailable
 
 
 IST = ZoneInfo('Asia/Kolkata')
-RULE = CalendarRule(reference_month=3, reference_day=21, version='1.0')
+RULE = CalendarRule(reference_month=3, reference_day=21, version='2.0')
 
 
-def make_event():
-    event_utc = datetime(2026, 6, 29, 23, 57, tzinfo=timezone.utc)
+def make_event(event_type='full_moon', days=0):
+    event_utc = datetime(2026, 6, 29, 23, 57, tzinfo=timezone.utc) + timedelta(days=days)
     return LunarEvent(
-        event_type='full_moon',
+        event_type=event_type,
         event_datetime_utc=event_utc,
         event_datetime_local=event_utc.astimezone(IST),
         source='Fake phases',
@@ -25,118 +23,88 @@ def make_event():
     )
 
 
-def make_sunrise():
-    sunrise_utc = datetime(2026, 7, 4, 0, 32, tzinfo=timezone.utc)
-    return SunriseResult(
-        target_local_date=date(2026, 7, 4),
-        sunrise_datetime_utc=sunrise_utc,
-        sunrise_datetime_local=sunrise_utc.astimezone(IST),
-        latitude=9.9040188,
-        longitude=77.8860417,
-        elevation_m=0,
-        source='Fake sunrise',
-        calculation_version='test-1',
-    )
-
-
-def make_tithi_boundary():
-    event = make_event()
-    boundary_utc = datetime(2026, 6, 27, 19, 14, tzinfo=timezone.utc)
-    return TithiBoundary(
-        paksha='shukla',
-        tithi_number=14,
-        tithi_name='சதுர்த்தசி',
-        phase_angle_degrees=156.0,
-        event_datetime_utc=boundary_utc,
-        event_datetime_local=boundary_utc.astimezone(IST),
-        reference_lunar_event=event,
-        source='Fake tithi',
-        calculation_version='test-1',
-    )
-
-
 class FakeLunarEngine:
-    def __init__(self, event=None, error=None):
-        self.event = event or make_event()
+    def __init__(self, error=None):
         self.error = error
         self.calls = []
 
     def first_event_for_tamil_month(self, year, month, rule):
-        self.calls.append((year, month, rule.version))
+        self.calls.append(('first', year, month, rule.version))
         if self.error:
             raise self.error
-        return self.event
+        return make_event()
 
-
-class FakeSunriseEngine:
-    def __init__(self, sunrise=None, error=None):
-        self.sunrise = sunrise or make_sunrise()
-        self.error = error
-
-    def sunrise_after_settling_period(self, event):
+    def phase_for_tamil_month(self, year, month, rule, event_type):
+        self.calls.append(('phase', year, month, rule.version, event_type))
         if self.error:
             raise self.error
-        return self.sunrise
-
-
-class FakeTithiEngine:
-    def __init__(self, boundary=None, error=None):
-        self.boundary = boundary or make_tithi_boundary()
-        self.error = error
-        self.calls = []
-
-    def chaturdashi_before(self, event):
-        self.calls.append(event)
-        if self.error:
-            raise self.error
-        return self.boundary
+        return make_event(event_type)
 
 
 @pytest.mark.parametrize(
     ('season_type', 'tamil_month', 'hours'),
-    [('aadi', 4, 432), ('margazhi', 9, 248)],
+    [('aadi', 4, 432), ('margazhi', 9, 264)],
 )
-def test_window_duration_and_month_selection(season_type, tamil_month, hours):
+def test_window_begins_at_lunar_event_and_uses_configured_duration(
+    season_type, tamil_month, hours
+):
     lunar = FakeLunarEngine()
-    tithi = FakeTithiEngine()
-    engine = KaruvottamWindowEngine(RULE, lunar, tithi, FakeSunriseEngine())
+    engine = KaruvottamWindowEngine(RULE, lunar)
 
     window = engine.generate(season_type, 2026)
 
-    assert lunar.calls == [(2026, tamil_month, '1.0')]
-    assert len(tithi.calls) == (1 if season_type == 'aadi' else 0)
-    assert window.start_datetime_local == make_sunrise().sunrise_datetime_local
+    assert window.start_datetime_local == window.trigger_event.event_datetime_local
     assert window.end_datetime_local - window.start_datetime_local == timedelta(hours=hours)
     assert window.duration_hours == hours
-    assert window.rule_version == '1.0'
+    assert window.sunrise is None
+    assert window.rule_version == '2.0'
     assert window.status == 'calculated'
+    assert lunar.calls[0][2] == tamil_month
 
 
-def test_window_record_retains_complete_provenance():
-    window = KaruvottamWindowEngine(
+def test_aadi_uses_first_new_or_full_moon_after_june_21_month_start():
+    lunar = FakeLunarEngine()
+
+    KaruvottamWindowEngine(RULE, lunar).generate('aadi', 2026)
+
+    assert lunar.calls == [('first', 2026, 4, '2.0')]
+
+
+def test_margazhi_phase_alternates_from_configured_anchor():
+    lunar = FakeLunarEngine()
+    engine = KaruvottamWindowEngine(
         RULE,
-        FakeLunarEngine(),
-        FakeTithiEngine(),
-        FakeSunriseEngine(),
-    ).generate('aadi', 2026)
+        lunar,
+        margazhi_anchor_year=2026,
+        margazhi_anchor_phase='new_moon',
+    )
+
+    first = engine.generate('margazhi', 2026)
+    second = engine.generate('margazhi', 2027)
+    earlier = engine.generate('margazhi', 2025)
+
+    assert first.trigger_event.event_type == 'new_moon'
+    assert second.trigger_event.event_type == 'full_moon'
+    assert earlier.trigger_event.event_type == 'full_moon'
+    assert lunar.calls == [
+        ('phase', 2026, 9, '2.0', 'new_moon'),
+        ('phase', 2027, 9, '2.0', 'full_moon'),
+        ('phase', 2025, 9, '2.0', 'full_moon'),
+    ]
+
+
+def test_window_record_retains_lunar_provenance_without_sunrise():
+    window = KaruvottamWindowEngine(RULE, FakeLunarEngine()).generate('aadi', 2026)
 
     record = window.as_record()
 
-    assert record['season_type'] == 'aadi'
-    assert record['season_year'] == 2026
     assert record['duration_hours'] == 432
-    assert record['trigger_event']['source'] == 'Fake tithi'
-    assert record['trigger_event']['reference_lunar_event']['source'] == 'Fake phases'
-    assert record['sunrise']['source'] == 'Fake sunrise'
+    assert record['trigger_event']['source'] == 'Fake phases'
+    assert record['sunrise'] is None
 
 
 def test_generate_year_returns_both_seasons():
-    windows = KaruvottamWindowEngine(
-        RULE,
-        FakeLunarEngine(),
-        FakeTithiEngine(),
-        FakeSunriseEngine(),
-    ).generate_year(2026)
+    windows = KaruvottamWindowEngine(RULE, FakeLunarEngine()).generate_year(2026)
 
     assert set(windows) == {'aadi', 'margazhi'}
 
@@ -145,32 +113,6 @@ def test_lunar_failure_becomes_window_unavailable():
     engine = KaruvottamWindowEngine(
         RULE,
         FakeLunarEngine(error=LunarEventUnavailable('no data')),
-        FakeTithiEngine(),
-        FakeSunriseEngine(),
-    )
-
-    with pytest.raises(WindowUnavailable, match='aadi window for 2026'):
-        engine.generate('aadi', 2026)
-
-
-def test_sunrise_failure_becomes_window_unavailable():
-    engine = KaruvottamWindowEngine(
-        RULE,
-        FakeLunarEngine(),
-        FakeTithiEngine(),
-        FakeSunriseEngine(error=SunriseUnavailable('no sunrise')),
-    )
-
-    with pytest.raises(WindowUnavailable, match='margazhi window for 2026'):
-        engine.generate('margazhi', 2026)
-
-
-def test_aadi_tithi_failure_becomes_window_unavailable():
-    engine = KaruvottamWindowEngine(
-        RULE,
-        FakeLunarEngine(),
-        FakeTithiEngine(error=TithiUnavailable('no boundary')),
-        FakeSunriseEngine(),
     )
 
     with pytest.raises(WindowUnavailable, match='aadi window for 2026'):
@@ -179,33 +121,37 @@ def test_aadi_tithi_failure_becomes_window_unavailable():
 
 @pytest.mark.parametrize('season_type', ['thai', '', 'AADI'])
 def test_unknown_season_is_rejected(season_type):
-    engine = KaruvottamWindowEngine(
-        RULE,
-        FakeLunarEngine(),
-        FakeTithiEngine(),
-        FakeSunriseEngine(),
-    )
-
     with pytest.raises(ValueError, match='unsupported season'):
-        engine.generate(season_type, 2026)
+        KaruvottamWindowEngine(RULE, FakeLunarEngine()).generate(season_type, 2026)
 
 
-def test_real_2026_aadi_window_uses_calculated_sunrise():
+@pytest.mark.parametrize(
+    ('anchor_year', 'anchor_phase', 'message'),
+    [(0, 'new_moon', 'positive'), (2026, 'quarter_moon', 'new_moon or full_moon')],
+)
+def test_invalid_margazhi_anchor_is_rejected(anchor_year, anchor_phase, message):
+    with pytest.raises(ValueError, match=message):
+        KaruvottamWindowEngine(RULE, FakeLunarEngine(), anchor_year, anchor_phase)
+
+
+def test_real_2026_aadi_window_starts_at_first_principal_phase():
     from app import WINDOW_ENGINE
 
     window = WINDOW_ENGINE.generate('aadi', 2026)
 
     assert window.start_datetime_local == datetime(
-        2026, 7, 2, 6, 1, 44, 785915, tzinfo=IST
+        2026, 6, 30, 5, 27, 17, 744216, tzinfo=IST
     )
-    assert window.trigger_event.event_type == 'shukla_chaturdashi_start'
+    assert window.trigger_event.event_type == 'full_moon'
     assert window.end_datetime_local - window.start_datetime_local == timedelta(days=18)
 
 
-def test_real_2026_margazhi_window_is_248_hours():
+def test_real_2026_margazhi_window_uses_new_moon_for_11_days():
     from app import WINDOW_ENGINE
 
     window = WINDOW_ENGINE.generate('margazhi', 2026)
 
-    assert window.start_datetime_local.date() == date(2026, 11, 28)
-    assert window.end_datetime_local - window.start_datetime_local == timedelta(hours=248)
+    assert window.trigger_event.event_type == 'new_moon'
+    assert window.start_datetime_local.date().year == 2026
+    assert window.start_datetime_local.date().month == 12
+    assert window.end_datetime_local - window.start_datetime_local == timedelta(days=11)

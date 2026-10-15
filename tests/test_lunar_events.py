@@ -78,6 +78,25 @@ def test_month_lookup_uses_modified_tamil_month_start():
     assert event.event_datetime_local == datetime(2026, 6, 30, 5, 27, tzinfo=IST)
 
 
+def test_specific_phase_lookup_uses_requested_phase_and_month_start():
+    event_time = datetime(2026, 12, 9, 0, 52, tzinfo=timezone.utc)
+    provider = FakeProvider(new_moon=event_time)
+
+    event = LunarEventEngine(IST, provider).phase_for_tamil_month(
+        2026, 9, RULE, 'new_moon'
+    )
+
+    assert event.event_type == 'new_moon'
+    assert event.event_datetime_utc == event_time
+
+
+def test_unknown_specific_phase_is_rejected():
+    with pytest.raises(ValueError, match='unsupported lunar event type'):
+        LunarEventEngine(IST).first_phase_after(
+            datetime(2026, 11, 21, tzinfo=IST), 'quarter_moon'
+        )
+
+
 def test_real_aadi_event_agrees_with_usno_to_two_minutes():
     event = LunarEventEngine(IST).first_event_for_tamil_month(2026, 4, RULE)
     usno_full_moon = datetime(2026, 6, 29, 23, 56, tzinfo=timezone.utc)
