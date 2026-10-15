@@ -67,6 +67,7 @@ python app.py
 | `karuvottam/data_access.py` | transaction மற்றும் repository அடிப்படையிலான data-access layer |
 | `karuvottam/weather_client.py` | retry, raw archive மற்றும் idempotent ERA5 ingestion |
 | `karuvottam/weather_quality.py` | record மற்றும் window-level weather quality validation |
+| `karuvottam/weather_csv.py` | preview-first UTF-8 weather CSV import மற்றும் export |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -135,3 +136,4 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [ERA5 weather client மற்றும் ingestion நடைமுறை](docs/WEATHER_INGESTION.md)
 - [Weather timestamp மற்றும் precipitation interval விதிகள்](docs/WEATHER_TIME_SPEC.md)
 - [Weather data-quality validation விதிகள்](docs/WEATHER_QUALITY.md)
+- [Weather CSV import மற்றும் export ஒப்பந்தம்](docs/WEATHER_CSV.md)

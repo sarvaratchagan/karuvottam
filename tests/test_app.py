@@ -9,6 +9,7 @@ from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     WeatherIngestionService,
 )
+from karuvottam.weather_csv import WeatherCsvService
 from karuvottam.weather_provider import OPEN_METEO_ERA5
 from karuvottam.weather_quality import WeatherQualityValidator
 
@@ -31,6 +32,7 @@ def test_app_imports():
     assert isinstance(
         app.extensions['weather_quality_validator'], WeatherQualityValidator
     )
+    assert isinstance(app.extensions['weather_csv_service'], WeatherCsvService)
     assert isinstance(
         app.extensions['weather_ingestion_service'], WeatherIngestionService
     )
