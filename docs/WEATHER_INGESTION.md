@@ -47,9 +47,10 @@ Before ingestion, the client requires:
 - equal, non-empty hourly array lengths;
 - returned grid latitude/longitude and optional elevation.
 
-Null weather values remain null and are marked `unvalidated_reanalysis`; range,
-missingness, and interpolation decisions belong to T2.4. Timestamp and precipitation
-interval semantics are defined in `WEATHER_TIME_SPEC.md`.
+Null weather values remain null. Before insertion, T2.4 assigns per-record quality
+flags, rejects invalid ranges and incoming duplicates, and generates a complete-window
+quality report. The rules are defined in `WEATHER_QUALITY.md`; timestamp and
+precipitation interval semantics are defined in `WEATHER_TIME_SPEC.md`.
 
 ## Raw payload provenance
 
@@ -76,8 +77,9 @@ location_id + observed_at_utc + source
 
 The ERA5 source key is `open-meteo:era5`. Ingestion uses `ON CONFLICT DO NOTHING` and
 reports inserted and existing counts. Repeating the same range therefore neither
-duplicates rows nor overwrites the original record. All rows from one response are
-written in a single transaction.
+duplicates rows nor overwrites the original record. All accepted rows from one
+response are written in a single transaction; rejected rows remain available in the
+raw artifact and quality report.
 
 ## Application wiring
 
@@ -93,6 +95,8 @@ report = service.ingest(
     start_date=date(2025, 7, 1),
     end_date=date(2025, 7, 2),
 )
+print(report.quality_report.overall_quality_flag)
+print(report.quality_report.coverage_pct)
 ```
 
 The database must already be migrated and the referenced location must exist. Its

@@ -8,7 +8,7 @@ import os
 import socket
 import ssl
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Mapping, Protocol, Sequence
@@ -22,6 +22,7 @@ import certifi
 
 from karuvottam.data_access import DataAccess, WeatherObservation
 from karuvottam.weather_provider import HistoricalWeatherProvider
+from karuvottam.weather_quality import WeatherQualityReport, WeatherQualityValidator
 
 
 RETRIABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
@@ -139,11 +140,13 @@ class WeatherIngestionReport:
     fetched_hours: int
     inserted_hours: int
     existing_hours: int
+    rejected_hours: int
     raw_payload_reference: str
     payload_sha256: str
     returned_latitude: float
     returned_longitude: float
     returned_elevation_m: float | None
+    quality_report: WeatherQualityReport
 
 
 def _json_error_reason(body: bytes) -> str | None:
@@ -496,10 +499,12 @@ class WeatherIngestionService:
         client: OpenMeteoHistoricalClient,
         data_access: DataAccess,
         raw_store: RawWeatherPayloadStore,
+        quality_validator: WeatherQualityValidator | None = None,
     ) -> None:
         self.client = client
         self.data_access = data_access
         self.raw_store = raw_store
+        self.quality_validator = quality_validator or WeatherQualityValidator()
 
     def ingest(
         self,
@@ -535,8 +540,36 @@ class WeatherIngestionService:
                 artifact.reference,
                 local_timezone,
             )
-            for observation in observations:
-                _, created = work.weather_observations.add_if_absent(observation)
+            expected_start = datetime(
+                start_date.year,
+                start_date.month,
+                start_date.day,
+                tzinfo=timezone.utc,
+            )
+            exclusive_end_date = end_date + timedelta(days=1)
+            expected_end = datetime(
+                exclusive_end_date.year,
+                exclusive_end_date.month,
+                exclusive_end_date.day,
+                tzinfo=timezone.utc,
+            )
+            quality_report = self.quality_validator.validate(
+                observations,
+                expected_start_utc=expected_start,
+                expected_end_utc=expected_end,
+            )
+            for observation, record_quality in zip(
+                observations, quality_report.records, strict=True
+            ):
+                if record_quality.rejected:
+                    continue
+                validated_observation = replace(
+                    observation,
+                    quality_flag=record_quality.quality_flag,
+                )
+                _, created = work.weather_observations.add_if_absent(
+                    validated_observation
+                )
                 if created:
                     inserted += 1
                 else:
@@ -545,11 +578,13 @@ class WeatherIngestionService:
             fetched_hours=len(observations),
             inserted_hours=inserted,
             existing_hours=existing,
+            rejected_hours=quality_report.rejected_records,
             raw_payload_reference=artifact.reference,
             payload_sha256=fetched.payload_sha256,
             returned_latitude=fetched.returned_latitude,
             returned_longitude=fetched.returned_longitude,
             returned_elevation_m=fetched.returned_elevation_m,
+            quality_report=quality_report,
         )
 
     def _observations(

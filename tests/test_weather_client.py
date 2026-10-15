@@ -224,6 +224,7 @@ def test_ingestion_is_idempotent_and_retains_raw_reference(tmp_path):
     assert first.fetched_hours == 2
     assert first.inserted_hours == 2
     assert first.existing_hours == 0
+    assert first.rejected_hours == 0
     assert second.inserted_hours == 0
     assert second.existing_hours == 2
     assert first.raw_payload_reference == second.raw_payload_reference
@@ -246,7 +247,61 @@ def test_ingestion_is_idempotent_and_retains_raw_reference(tmp_path):
     )
     assert records[0].precipitation_interval_end_utc == '2025-07-01T00:00:00Z'
     assert records[0].precipitation_interval_minutes == 60
-    assert records[0].quality_flag == 'unvalidated_reanalysis'
+    assert records[0].quality_flag == 'valid'
+    assert first.quality_report.expected_hours == 48
+    assert first.quality_report.unique_hours == 2
+    assert first.quality_report.overall_quality_flag == 'warning'
+
+
+def test_ingestion_rejects_invalid_ranges_and_flags_missing_values(tmp_path):
+    database_path = tmp_path / 'karuvottam.sqlite3'
+    migrate_database(database_path)
+    data_access = DataAccess(database_path)
+    with data_access.transaction() as work:
+        location = work.locations.add(
+            name='Target',
+            latitude=9.9040188,
+            longitude=77.8860417,
+            elevation_m=0,
+            timezone_name='Asia/Kolkata',
+        )
+    body = _payload(
+        array_overrides={
+            'temperature_2m': [80.0, 27.5],
+            'pressure_msl': [1007.7, None],
+        }
+    )
+    service = WeatherIngestionService(
+        _client(FakeTransport([_response(body=body)])),
+        data_access,
+        RawWeatherPayloadStore(tmp_path / 'raw'),
+    )
+
+    report = service.ingest(
+        location_id=location.id,
+        latitude=location.latitude,
+        longitude=location.longitude,
+        start_date=date(2025, 7, 1),
+        end_date=date(2025, 7, 2),
+    )
+
+    assert report.fetched_hours == 2
+    assert report.inserted_hours == 1
+    assert report.rejected_hours == 1
+    assert report.quality_report.out_of_range_records == 1
+    assert report.quality_report.missing_value_records == 1
+    assert [item.quality_flag for item in report.quality_report.records] == [
+        'out_of_range',
+        'missing',
+    ]
+    with data_access.transaction() as work:
+        records = work.weather_observations.list_between(
+            location.id,
+            datetime(2025, 7, 1, tzinfo=timezone.utc),
+            datetime(2025, 7, 2, tzinfo=timezone.utc),
+        )
+    assert len(records) == 1
+    assert records[0].quality_flag == 'missing'
 
 
 @pytest.mark.parametrize(
@@ -296,8 +351,8 @@ def test_local_timestamp_uses_the_persisted_location_timezone(tmp_path):
         location_id=location.id,
         latitude=location.latitude,
         longitude=location.longitude,
-        start_date=date(2025, 7, 1),
-        end_date=date(2025, 7, 2),
+        start_date=date(2025, 6, 30),
+        end_date=date(2025, 6, 30),
     )
 
     with data_access.transaction() as work:

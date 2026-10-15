@@ -14,6 +14,7 @@ from karuvottam.weather_client import (
     WeatherIngestionService,
 )
 from karuvottam.weather_provider import selected_historical_provider
+from karuvottam.weather_quality import WeatherQualityValidator
 from karuvottam.windows import KaruvottamWindowEngine
 
 WEATHER_PROVIDER_SPEC = selected_historical_provider(
@@ -37,6 +38,7 @@ app.config.from_mapping(
     DATABASE_PATH=str(settings.database_path),
 )
 DATA_ACCESS = DataAccess(settings.database_path)
+WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
 WEATHER_CLIENT = OpenMeteoHistoricalClient(
     WEATHER_PROVIDER_SPEC,
     api_key=settings.weather_api_key,
@@ -48,10 +50,12 @@ WEATHER_INGESTION_SERVICE = WeatherIngestionService(
     WEATHER_CLIENT,
     DATA_ACCESS,
     RawWeatherPayloadStore(settings.weather_raw_data_dir),
+    WEATHER_QUALITY_VALIDATOR,
 )
 app.extensions['data_access'] = DATA_ACCESS
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC
 app.extensions['weather_client'] = WEATHER_CLIENT
+app.extensions['weather_quality_validator'] = WEATHER_QUALITY_VALIDATOR
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
 
 LOCATION_TIMEZONE = settings.timezone

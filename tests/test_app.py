@@ -10,6 +10,7 @@ from karuvottam.weather_client import (
     WeatherIngestionService,
 )
 from karuvottam.weather_provider import OPEN_METEO_ERA5
+from karuvottam.weather_quality import WeatherQualityValidator
 
 
 IST = ZoneInfo('Asia/Kolkata')
@@ -27,6 +28,9 @@ def test_app_imports():
     assert isinstance(app.extensions['data_access'], DataAccess)
     assert app.extensions['weather_provider_spec'] is OPEN_METEO_ERA5
     assert isinstance(app.extensions['weather_client'], OpenMeteoHistoricalClient)
+    assert isinstance(
+        app.extensions['weather_quality_validator'], WeatherQualityValidator
+    )
     assert isinstance(
         app.extensions['weather_ingestion_service'], WeatherIngestionService
     )
