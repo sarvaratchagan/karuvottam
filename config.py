@@ -41,6 +41,8 @@ class Settings:
     timezone_name: str
     chithirai_reference: str
     calendar_rule_version: str
+    margazhi_alternation_anchor_year: int
+    margazhi_alternation_anchor_phase: str
     weather_provider: str
     weather_model: str
     weather_api_base_url: str
@@ -77,6 +79,12 @@ class Settings:
         weather_retry_backoff_seconds = _parse_float(
             values, 'KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS', '1'
         )
+        margazhi_anchor_year = _parse_int(
+            values, 'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_YEAR', '2026'
+        )
+        margazhi_anchor_phase = values.get(
+            'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_PHASE', 'new_moon'
+        ).strip().lower()
         timezone_name = values.get('KARUVOTTAM_TIMEZONE', 'Asia/Kolkata')
         reference = values.get('KARUVOTTAM_CHITHIRAI_REFERENCE', '03-21')
         database_path_value = values.get(
@@ -113,6 +121,15 @@ class Settings:
             raise ConfigurationError(
                 'KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS must not be negative'
             )
+        if margazhi_anchor_year < 1:
+            raise ConfigurationError(
+                'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_YEAR must be positive'
+            )
+        if margazhi_anchor_phase not in {'new_moon', 'full_moon'}:
+            raise ConfigurationError(
+                'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_PHASE must be '
+                'new_moon or full_moon'
+            )
 
         try:
             ZoneInfo(timezone_name)
@@ -139,7 +156,9 @@ class Settings:
             elevation_m=elevation_m,
             timezone_name=timezone_name,
             chithirai_reference=reference,
-            calendar_rule_version=values.get('KARUVOTTAM_CALENDAR_RULE_VERSION', '1.0'),
+            calendar_rule_version=values.get('KARUVOTTAM_CALENDAR_RULE_VERSION', '2.0'),
+            margazhi_alternation_anchor_year=margazhi_anchor_year,
+            margazhi_alternation_anchor_phase=margazhi_anchor_phase,
             weather_provider=values.get('KARUVOTTAM_WEATHER_PROVIDER', 'open-meteo'),
             weather_model=values.get('KARUVOTTAM_WEATHER_MODEL', 'era5'),
             weather_api_base_url=values.get(

@@ -71,7 +71,7 @@ def test_ui_identifies_custom_calendar_rule(client):
     assert '03-21 = சித்திரை 1' in home
     assert 'அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல' in home
     assert 'தனிப்பயன் தமிழ் தேதி' in prediction
-    assert 'மார்கழி 19 / 2026' in prediction
+    assert 'தை 1 / 2026' in prediction
 
 
 def test_home_displays_lunar_event_provenance(client):
@@ -81,52 +81,53 @@ def test_home_displays_lunar_event_provenance(client):
     assert 'ஆடி:' in home
     assert 'மார்கழி:' in home
     assert 'Astronomy Engine 2.1.19' in home
-    assert 'சுக்கில பட்ச சதுர்த்தசி தொடக்கம்' in home
-    assert '28-06-2026 00:44' in home
-    assert 'நான்கு நாள் நிலைபெறுதலுக்குப் பின் உள்ளூர் சூரிய உதயம்' in home
-    assert '02-07-2026 06:01' in home
+    assert 'பௌர்ணமி —' in home
+    assert '30-06-2026 05:27' in home
+    assert 'அமாவாசை —' in home
+    assert '09-12-2026 06:22' in home
+    assert 'நான்கு நாள் நிலைபெறுதல்' not in home
 
 
 def test_aadi_window_is_exactly_18_days():
     start, end = karuvottam_window(2026, 'aadi')
 
-    assert start == datetime(2026, 7, 2, 6, 1, 44, 785915, tzinfo=IST)
+    assert start == datetime(2026, 6, 30, 5, 27, 17, 744216, tzinfo=IST)
     assert end - start == timedelta(days=18)
 
 
-def test_margazhi_window_is_exactly_248_hours():
+def test_margazhi_window_is_exactly_11_days():
     start, end = karuvottam_window(2026, 'margazhi')
 
-    assert start == datetime(2026, 11, 28, 6, 18, 10, 900269, tzinfo=IST)
-    assert end - start == timedelta(hours=248)
+    assert start == datetime(2026, 12, 9, 6, 22, 31, 284217, tzinfo=IST)
+    assert end - start == timedelta(days=11)
 
 
 def test_aadi_forecast_mapping_uses_margazhi_window():
     cycle = build_cycle(2026)
 
     assert cycle['margazhi_end'] == datetime(
-        2026, 12, 8, 14, 18, 10, 900269, tzinfo=IST
+        2026, 12, 20, 6, 22, 31, 284217, tzinfo=IST
     )
-    assert cycle['aadi_prediction_start'] == date(2026, 12, 9)
-    assert cycle['aadi_prediction_end'] == date(2027, 6, 6)
+    assert cycle['aadi_prediction_start'] == date(2026, 12, 21)
+    assert cycle['aadi_prediction_end'] == date(2027, 6, 18)
     assert (cycle['aadi_prediction_end'] - cycle['aadi_prediction_start']).days + 1 == 180
 
 
 def test_margazhi_forecast_mapping_uses_next_aadi_window():
     cycle = build_cycle(2026)
 
-    assert cycle['margazhi_prediction_start'] == date(2027, 7, 25)
-    assert cycle['margazhi_prediction_end'] == date(2027, 12, 11)
+    assert cycle['margazhi_prediction_start'] == date(2027, 7, 23)
+    assert cycle['margazhi_prediction_end'] == date(2027, 12, 9)
     assert (cycle['margazhi_prediction_end'] - cycle['margazhi_prediction_start']).days + 1 == 140
 
 
 def test_home_displays_precise_calculated_window_boundaries(client):
     home = client.get('/?year=2026').get_data(as_text=True)
 
-    assert '02-07-2026 06:01 → 20-07-2026 06:01' in home
-    assert '28-11-2026 06:18 → 08-12-2026 14:18' in home
+    assert '30-06-2026 05:27 → 18-07-2026 05:27' in home
+    assert '09-12-2026 06:22 → 20-12-2026 06:22' in home
     assert '432 மணி' in home
-    assert '248 மணி' in home
+    assert '264 மணி' in home
 
 
 def test_forecast_start_uses_local_date_after_utc_conversion():

@@ -5,13 +5,12 @@ from datetime import datetime, timedelta
 
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.lunar_events import LunarEvent, LunarEventEngine, LunarEventUnavailable
-from karuvottam.sunrise import SunriseEngine, SunriseResult, SunriseUnavailable
-from karuvottam.tithi import TithiBoundary, TithiEngine, TithiUnavailable
+from karuvottam.sunrise import SunriseResult
 
 
 SEASON_DEFINITIONS = {
     'aadi': {'tamil_month': 4, 'duration_hours': 18 * 24, 'name_tamil': 'ஆடி'},
-    'margazhi': {'tamil_month': 9, 'duration_hours': 248, 'name_tamil': 'மார்கழி'},
+    'margazhi': {'tamil_month': 9, 'duration_hours': 11 * 24, 'name_tamil': 'மார்கழி'},
 }
 
 
@@ -26,8 +25,8 @@ class KaruvottamWindow:
     start_datetime_local: datetime
     end_datetime_local: datetime
     duration_hours: int
-    trigger_event: LunarEvent | TithiBoundary
-    sunrise: SunriseResult
+    trigger_event: LunarEvent
+    sunrise: SunriseResult | None
     rule_version: str
     status: str = 'calculated'
 
@@ -44,7 +43,7 @@ class KaruvottamWindow:
             'end_datetime_local': self.end_datetime_local,
             'duration_hours': self.duration_hours,
             'trigger_event': self.trigger_event.as_record(),
-            'sunrise': self.sunrise.as_record(),
+            'sunrise': self.sunrise.as_record() if self.sunrise else None,
             'rule_version': self.rule_version,
             'status': self.status,
         }
@@ -55,13 +54,24 @@ class KaruvottamWindowEngine:
         self,
         calendar_rule: CalendarRule,
         lunar_engine: LunarEventEngine,
-        tithi_engine: TithiEngine,
-        sunrise_engine: SunriseEngine,
+        margazhi_anchor_year: int = 2026,
+        margazhi_anchor_phase: str = 'new_moon',
     ) -> None:
+        if margazhi_anchor_year < 1:
+            raise ValueError('margazhi_anchor_year must be positive')
+        if margazhi_anchor_phase not in {'new_moon', 'full_moon'}:
+            raise ValueError('margazhi_anchor_phase must be new_moon or full_moon')
         self.calendar_rule = calendar_rule
         self.lunar_engine = lunar_engine
-        self.tithi_engine = tithi_engine
-        self.sunrise_engine = sunrise_engine
+        self.margazhi_anchor_year = margazhi_anchor_year
+        self.margazhi_anchor_phase = margazhi_anchor_phase
+
+    def margazhi_event_type_for_year(self, season_year: int) -> str:
+        """Alternate the Margazhi trigger phase every civil/Tamil season year."""
+        same_parity = (season_year - self.margazhi_anchor_year) % 2 == 0
+        if same_parity:
+            return self.margazhi_anchor_phase
+        return 'full_moon' if self.margazhi_anchor_phase == 'new_moon' else 'new_moon'
 
     def generate(self, season_type: str, season_year: int) -> KaruvottamWindow:
         try:
@@ -72,24 +82,26 @@ class KaruvottamWindowEngine:
             raise ValueError('season_year must be positive')
 
         try:
-            lunar_event = self.lunar_engine.first_event_for_tamil_month(
-                season_year,
-                definition['tamil_month'],
-                self.calendar_rule,
-            )
-            trigger_event = (
-                self.tithi_engine.chaturdashi_before(lunar_event)
-                if season_type == 'aadi'
-                else lunar_event
-            )
-            sunrise = self.sunrise_engine.sunrise_after_settling_period(trigger_event)
-        except (LunarEventUnavailable, TithiUnavailable, SunriseUnavailable) as exc:
+            if season_type == 'aadi':
+                trigger_event = self.lunar_engine.first_event_for_tamil_month(
+                    season_year,
+                    definition['tamil_month'],
+                    self.calendar_rule,
+                )
+            else:
+                trigger_event = self.lunar_engine.phase_for_tamil_month(
+                    season_year,
+                    definition['tamil_month'],
+                    self.calendar_rule,
+                    self.margazhi_event_type_for_year(season_year),
+                )
+        except LunarEventUnavailable as exc:
             raise WindowUnavailable(
                 f'unable to generate {season_type} window for {season_year}'
             ) from exc
 
         duration_hours = definition['duration_hours']
-        start = sunrise.sunrise_datetime_local
+        start = trigger_event.event_datetime_local
         end = start + timedelta(hours=duration_hours)
         return KaruvottamWindow(
             season_type=season_type,
@@ -98,7 +110,7 @@ class KaruvottamWindowEngine:
             end_datetime_local=end,
             duration_hours=duration_hours,
             trigger_event=trigger_event,
-            sunrise=sunrise,
+            sunrise=None,
             rule_version=self.calendar_rule.version,
         )
 

@@ -12,7 +12,7 @@
         <div>
             <div class="eyebrow">கருவோட்டம் • MVP</div>
             <h1>தன்னியக்க துல்லிய மழை முன்னறிவிப்பு திட்டம்</h1>
-            <p>ஆடி 18 நாள் → 180 நாள் | மார்கழி 10.33 நாள் → 140 நாள்</p></div>
+            <p>ஆடி 18 நாள் → 180 நாள் | மார்கழி 11 நாள் → 140 நாள்</p></div>
         <form><label>ஆண்டு <input name="year" type="number" value="{{selected_year}}" min="2020" max="2100"></label>
             <button>காட்டு</button>
         </form>
@@ -27,9 +27,9 @@
             <p>{{cycle.aadi_prediction_start_f}} → {{cycle.aadi_prediction_end_f}}</p><a
                     href="/prediction?year={{selected_year}}&mode=aadi">180 நாள் முன்னறிவிப்பைப் பார்க்க →</a></article>
         <article class="card"><span class="tag">மார்கழி கருவோட்டம்</span>
-            <h2>10.33 நாட்கள்</h2>
+            <h2>11 நாட்கள்</h2>
             <p>{{cycle.margazhi_start_f}} → {{cycle.margazhi_end_f}}</p>
-            <p class="foot">அரைத் திறந்த காலம் [தொடக்கம், முடிவு) • 248 மணி • விதி {{cycle.margazhi_window.rule_version}}</p>
+            <p class="foot">அரைத் திறந்த காலம் [தொடக்கம், முடிவு) • 264 மணி • இரவு பகல் தொடர்ச்சி • விதி {{cycle.margazhi_window.rule_version}}</p>
             <div class="rule">அடுத்த ஆண்டு ஆடி கருவோட்டம் முடிந்த மறுநாள் முதல்</div>
             <strong>140 நாட்கள்</strong>
             <p>{{cycle.margazhi_prediction_start_f}} → {{cycle.margazhi_prediction_end_f}}</p><a
@@ -44,18 +44,13 @@
             {% for entry in lunar_events %}
                 <div class="rule"><b>{{entry.month_name}}:</b> {{entry.event.event_type_tamil}} —
                     {{entry.event.event_datetime_local.strftime('%d-%m-%Y %H:%M')}}
-                    ({{entry.event.source}} {{entry.event.calculation_version}})<br>
-                    {% if entry.sunrise %}
-                        நான்கு நாள் நிலைபெறுதலுக்குப் பின் உள்ளூர் சூரிய உதயம்:
-                        <b>{{entry.sunrise.sunrise_datetime_local.strftime('%d-%m-%Y %H:%M')}}</b>
-                    {% else %}
-                        சூரிய உதய நேரம் கிடைக்கவில்லை.
-                    {% endif %}
+                    ({{entry.event.source}} {{entry.event.calculation_version}})
                 </div>
             {% endfor %}
         {% endif %}
-        <p class="foot">மாதம் தொடங்கிய பின் முதலில் வரும் அமாவாசை/பௌர்ணமி தேர்வு செய்யப்படுகிறது.
-            ஆடிக்கு அதன் முந்தைய சதுர்த்தசி தொடக்கம் இறுதித் தூண்டுதல்; மார்கழிக்கு சந்திர நிகழ்வே தூண்டுதல்.</p>
+        <p class="foot">ஆடி 1 (சூன் 21) தொடங்கிய பின் முதலில் வரும் அமாவாசை/பௌர்ணமி நிகழ்வு நேரமே ஆடி தொடக்கம்.
+            மார்கழியில் {{cycle.margazhi_window.trigger_event.event_type_tamil}} தேர்ந்தெடுக்கப்பட்டுள்ளது; அமாவாசை மற்றும்
+            பௌர்ணமி ஆண்டுதோறும் மாறி மாறி பயன்படுத்தப்படும்.</p>
     </section>
     <section class="card"><h2>ஆண்டு சுழற்சி</h2>
         <div class="timeline">
@@ -66,16 +61,16 @@
             <div><b>180 நாள்</b><br>முன்னறிவிப்பு</div>
         </div>
         <div class="timeline second">
-            <div>மார்கழி<br><b>10.33 நாள் தரவு</b></div>
+            <div>மார்கழி<br><b>11 நாள் தரவு</b></div>
             <i>→</i>
             <div>அடுத்த ஆண்டு ஆடி முடிவு<br><b>மறுநாள்</b></div>
             <i>→</i>
             <div><b>140 நாள்</b><br>முன்னறிவிப்பு</div>
         </div>
     </section>
-    <section class="notice"><b>குறிப்பு:</b> இது MVP கணிமுறை முன்மாதிரி. கருவோட்டத் தொடக்க நேரங்கள் சந்திர நிகழ்வு,
-        நான்கு நாள் நிலைபெறுதல் மற்றும் உள்ளூர் சூரிய உதயத்திலிருந்து கணக்கிடப்படுகின்றன. வானிலைத் தரவு இணைப்பு அடுத்த
-        கட்டத்தில் சேர்க்கப்படும். முன்னறிவிப்பு மதிப்புகள் தற்போது விளக்கக் காட்சிக்கானவை.
+    <section class="notice"><b>குறிப்பு:</b> இது MVP கணிமுறை முன்மாதிரி. கருவோட்டத் தொடக்க நேரங்கள் தேர்ந்தெடுக்கப்பட்ட
+        சந்திர நிகழ்வின் துல்லிய நேரத்திலிருந்து நேரடியாகக் கணக்கிடப்படுகின்றன. மார்கழி கண்காணிப்பு 11 நாட்கள் இரவு பகல்
+        பாராமல் தொடர்கிறது. முன்னறிவிப்பு மதிப்புகள் தற்போது விளக்கக் காட்சிக்கானவை.
     </section>
     <section class="notice"><b>தனிப்பயன் நாட்காட்டி விதி:</b>
         {{calendar_rule.reference_label}} = சித்திரை 1; விதிப் பதிப்பு {{calendar_rule.version}}.

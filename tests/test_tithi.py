@@ -68,10 +68,10 @@ def test_chaturdashi_boundary_for_each_lunar_event(
 
 
 def test_real_2026_aadi_chaturdashi_precedes_full_moon():
-    from app import CALENDAR_RULE, LUNAR_EVENT_ENGINE, TITHI_ENGINE
+    from app import CALENDAR_RULE, LUNAR_EVENT_ENGINE
 
     event = LUNAR_EVENT_ENGINE.first_event_for_tamil_month(2026, 4, CALENDAR_RULE)
-    boundary = TITHI_ENGINE.chaturdashi_before(event)
+    boundary = TithiEngine(IST).chaturdashi_before(event)
 
     assert event.event_type == 'full_moon'
     assert boundary.paksha == 'shukla'

@@ -1,6 +1,6 @@
 # Karuvottam Project Task Backlog
 
-Derived from `PROJECT_PLAN.md` (version 1.1).
+Derived from `PROJECT_PLAN.md` (version 1.2).
 
 ## Working conventions
 
@@ -15,7 +15,7 @@ Derived from `PROJECT_PLAN.md` (version 1.1).
 | Milestone | Scope | Exit condition |
 |---|---|---|
 | M0 — Stable MVP | Phase 0 | Application starts reliably and smoke tests pass |
-| M1 — Core rule engine | Phases 1 and 3 | Calendar, lunar, sunrise, window, and persistence logic pass tests |
+| M1 — Core rule engine | Phases 1 and 3 | Calendar, alternating lunar phase, window, and persistence logic pass tests |
 | M2 — Data-ready MVP | Phase 2 | Real hourly weather data can be fetched/imported, validated, and stored |
 | M3 — Forecast MVP | Phases 4 and 5 | 180/140-day experimental outputs are traceable and visible/exportable |
 | M4 — Research validation | Phase 6 | Multi-year backtest and baseline comparison are reproducible |
@@ -34,11 +34,11 @@ Derived from `PROJECT_PLAN.md` (version 1.1).
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T1.1 | Specify the Aadi 180-day and Margazhi 140-day mappings | P1 | T0.3 | Done | Unassigned | Inclusive/exclusive boundaries, day-1 convention, UTC/local handling, and the exact 248-hour Margazhi duration are documented with examples and tests |
+| T1.1 | Specify the Aadi 180-day and Margazhi 140-day mappings | P1 | T0.3 | Done | Unassigned | Inclusive/exclusive boundaries, day-1 convention, UTC/local handling, and the exact 264-hour Margazhi duration are documented with examples and tests |
 | T1.2 | Implement the modified Tamil calendar engine | P1 | T1.1 | Done | Unassigned | March 21 = Chithirai 1 is configurable/versioned; month/year boundaries and Gregorian↔Tamil conversions pass boundary tests; UI identifies it as a custom rule |
 | T1.3 | Implement lunar-event calculation | P1 | T1.1, T3.3 | Done | Unassigned | The first full moon or new moon after the configured Tamil-month start is selected; source, local/UTC timestamps, calculation version, and unavailable-data behavior are stored |
-| T1.4 | Implement local sunrise calculation | P1 | T1.3, T3.3 | Done | Unassigned | Sunrise is calculated for the configured location after the four-day settling period and verified in `Asia/Kolkata`; midnight is never substituted |
-| T1.5 | Generate Karuvottam observation windows | P1 | T1.2, T1.4 | Done | Unassigned | Aadi uses the preceding Shukla/Krishna Chaturdashi start and lasts 18 full days; Margazhi retains its lunar-event trigger and lasts 248 hours; provenance and rule version are stored and tested |
+| T1.4 | Retain standalone local sunrise calculation | P1 | T1.3, T3.3 | Done | Unassigned | Historical v1 sunrise calculations remain tested but are not used by active v2 observation windows |
+| T1.5 | Generate Karuvottam observation windows | P1 | T1.2, T1.3 | Done | Unassigned | Aadi begins at the first new/full moon after June 21 for 18 days; Margazhi alternates new/full moon yearly for 11 continuous days; provenance and rule version are stored and tested |
 
 ## Phase 2 — Integrate weather data
 
@@ -72,7 +72,7 @@ Derived from `PROJECT_PLAN.md` (version 1.1).
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
 | T5.1 | Build the Tamil status dashboard | P2 | T2.4, T3.2, T4.3 | Todo | Unassigned | Active location, next window, latest data, quality status, latest forecast, and actionable warnings appear on one page |
-| T5.2 | Build the Karuvottam calendar view | P2 | T1.5, T3.2 | Todo | Unassigned | Aadi/Margazhi windows, trigger event, four-day settling period, sunrise, start/end, and rule details are visible and traceable |
+| T5.2 | Build the Karuvottam calendar view | P2 | T1.5, T3.2 | Todo | Unassigned | Aadi/Margazhi windows, selected lunar phase, alternation rule, start/end, and rule details are visible and traceable |
 | T5.3 | Build the rain-forecast calendar | P2 | T4.3, T2.5 | Todo | Unassigned | Day/week/month views show category, available probability, quality, method, experimental/no-data state, and CSV export; layout works on small screens |
 | T5.4 | Build the observation-data inspection page | P2 | T2.4, T3.2 | Todo | Unassigned | Time-series views cover required variables; raw/interpolated observations and missing intervals are visually distinct |
 | T5.5 | Add UI acceptance and accessibility checks | P2 | T5.1, T5.2, T5.3, T5.4 | Todo | Unassigned | Tamil renders correctly; invalid input and no-data states are understandable; key pages work on desktop/mobile and do not return unexplained 500 errors |
@@ -127,7 +127,7 @@ Establish the historical data model and map before recent/live ingestion. T8.7 a
 
 ## Recommended next implementation sequence
 
-The stabilization, rule-engine, configuration, lunar, sunrise, and observation-window tasks are complete. Continue in this order unless repository inspection reveals a blocker:
+The stabilization, rule-engine, configuration, lunar, and observation-window tasks are complete. Continue in this order unless repository inspection reveals a blocker:
 
 1. T3.1 — Create the SQLite schema and migrations, including the new event-analysis tables.
 2. T3.2 — Create the data-access layer.
@@ -145,9 +145,9 @@ The stabilization, rule-engine, configuration, lunar, sunrise, and observation-w
 - [ ] Application starts on a MacBook using documented steps.
 - [ ] Home page and core pages load without errors.
 - [ ] Target location and `Asia/Kolkata` are configured.
-- [ ] Aadi 18-day and Margazhi 248-hour windows are correct.
+- [ ] Aadi 18-day and Margazhi 264-hour windows are correct.
 - [ ] Recurring 180/140-day mappings pass automated tests.
-- [ ] Lunar-event and local-sunrise calculations are verified.
+- [ ] Aadi first-phase and Margazhi alternating-phase calculations are verified.
 - [ ] Real weather data ingestion or import works.
 - [ ] Quality and interpolation are clearly labelled.
 - [ ] Predictions and their provenance are stored.
