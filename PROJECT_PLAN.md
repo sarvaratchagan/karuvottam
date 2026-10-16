@@ -478,6 +478,17 @@ karuvottam/
 
 **செயலாக்க நிலை:** `/observations` பக்கம் date/source filters, coverage மற்றும் raw/interpolated counts, வெப்பநிலை/ஈரப்பதம்/மேக மூட்டம்/மழை/காற்று dependency-free SVG time-series, field-level missing-value counts, hourly gap ranges மற்றும் சமீபத்திய 100 பதிவு விவரங்களை வழங்குகிறது. கோடுகள் உண்மையான இடைவெளிகளைக் கடந்து இணைக்கப்படாது; raw மற்றும் interpolation markers தனித்தனியாகத் தெரியும். UTC hourly cadence இந்திய `+05:30` local-date எல்லைகளுடன் சரியாக align செய்யப்படுகிறது. Configured location/தரவு/database இல்லாத நிலைகளும் தெளிவான தமிழ் fallback ஆகக் காட்டப்படுகின்றன.
 
+#### T5.5 — UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்
+- முக்கிய வழித்தடங்களில் தமிழ்/UTF-8 உள்ளடக்கம் மற்றும் semantic page structure-ஐச் சரிபார்த்தல்.
+- keyboard skip link, focus indicator, form labels, table captions/headings மற்றும் SVG accessible names சேர்த்தல்.
+- தவறான ஆண்டு, mode, view மற்றும் தேதி உள்ளீடுகளுக்கு புரிந்துகொள்ளக்கூடிய தமிழ் fallback காட்டுதல்.
+- தரவு/தரவுத்தளம் இல்லாத நிலைகளில் 500 பிழையின்றி செயல்படுவதைச் சரிபார்த்தல்.
+- சிறிய திரைகளுக்கான card layouts, 44px controls, reduced-motion மற்றும் forced-colors ஆதரவைச் சரிபார்த்தல்.
+
+**முடிவு:** முக்கிய தமிழ் பக்கங்கள் semantic automated audit-ஐக் கடக்கின்றன; தவறான உள்ளீடும் தரவு இல்லாத நிலையும் பயனருக்குத் தெளிவாகக் காட்டப்படுகின்றன.
+
+**செயலாக்க நிலை:** `/`, `/calendar`, `/prediction` நாள்/வாரம்/மாதக் காட்சிகள் மற்றும் `/observations` ஆகியவற்றுக்கு Flask test-client அடிப்படையிலான UI acceptance suite உள்ளது. ஒரே `main`, skip target, Tamil text, unique IDs, labelled controls, named SVGs, table captions/header scope மற்றும் viewport metadata சரிபார்க்கப்படுகின்றன. shared CSS தெளிவான keyboard focus, touch-target அளவு, responsive table-to-card மாற்றம், reduced-motion மற்றும் forced-colors ஆதரவை வழங்குகிறது. இது structural regression coverage; வெளியீட்டிற்கு முன் உண்மையான browser zoom, keyboard மற்றும் screen-reader manual check இன்னும் பரிந்துரைக்கப்படுகிறது.
+
 ### கட்டம் 6 — பின்னோக்குச் சோதனை மற்றும் அறிவியல் மதிப்பீடு
 
 #### T6.1 — பல ஆண்டு வரலாற்றுத் தரவு

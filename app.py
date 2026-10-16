@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 
-from flask import Flask, Response, render_template, request
+from flask import Flask, Response, g, render_template, request
 
 from config import settings
 from karuvottam.calendar_engine import CalendarRule
@@ -116,6 +116,19 @@ app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
 app.extensions['forecast_calendar_service'] = FORECAST_CALENDAR_SERVICE
 app.extensions['observation_inspection_service'] = OBSERVATION_INSPECTION_SERVICE
 
+MIN_UI_YEAR = 2020
+MAX_UI_YEAR = 2100
+
+
+def add_ui_notice(message: str) -> None:
+    existing = getattr(g, 'ui_notice', None)
+    g.ui_notice = f'{existing} {message}' if existing else message
+
+
+@app.context_processor
+def inject_ui_notice():
+    return {'ui_notice': getattr(g, 'ui_notice', None)}
+
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)
     return window.start_datetime_local, window.end_datetime_local
@@ -124,10 +137,27 @@ def karuvottam_window(year: int, kind: str):
 def requested_year(default: int = 2026) -> int:
     raw_year = request.args.get('year', str(default))
     try:
-        return int(raw_year)
+        year = int(raw_year)
     except ValueError:
         app.logger.warning('Invalid year parameter %r; using %s', raw_year, default)
+        add_ui_notice(
+            f'ஆண்டு செல்லாது; இயல்புநிலை {default} ஆண்டு காட்டப்படுகிறது.'
+        )
         return default
+    if not MIN_UI_YEAR <= year <= MAX_UI_YEAR:
+        app.logger.warning(
+            'Invalid year parameter %r; supported range is %s-%s; using %s',
+            raw_year,
+            MIN_UI_YEAR,
+            MAX_UI_YEAR,
+            default,
+        )
+        add_ui_notice(
+            f'ஆண்டு {MIN_UI_YEAR}–{MAX_UI_YEAR} வரம்பில் இருக்க வேண்டும்; '
+            f'{default} ஆண்டு காட்டப்படுகிறது.'
+        )
+        return default
+    return year
 
 
 def forecast_period_after_window(window_end: datetime, total_days: int):
@@ -245,6 +275,7 @@ def prediction():
             'Invalid forecast view %r; using day',
             view_mode,
         )
+        add_ui_notice('காட்சி வகை செல்லாது; நாள் காட்சி காட்டப்படுகிறது.')
         view_mode = 'day'
     timeline = build_prediction_timeline(year, mode)
     forecast_calendar = FORECAST_CALENDAR_SERVICE.build(timeline, view_mode)
@@ -262,7 +293,10 @@ def prediction():
 
 def requested_prediction_mode() -> str:
     mode = request.args.get('mode', 'aadi')
-    return mode if mode in {'aadi', 'margazhi'} else 'aadi'
+    if mode in {'aadi', 'margazhi'}:
+        return mode
+    add_ui_notice('கருவோட்ட வகை செல்லாது; ஆடி தேர்ந்தெடுக்கப்பட்டது.')
+    return 'aadi'
 
 
 def build_prediction_timeline(year: int, mode: str):

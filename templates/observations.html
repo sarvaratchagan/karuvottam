@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="wrap observation-page">
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap observation-page" id="main-content" tabindex="-1">
     <a class="back" href="/">← முதற்பக்கம்</a>
     <header class="observation-header">
         <div>
@@ -15,22 +16,22 @@
             <h1>வானிலைத் தரவு ஆய்வு</h1>
             <p>{{inspection.location_name}}</p>
         </div>
-        <form class="inspection-filter" action="/observations">
-            <label>தொடக்கம்
-                <input type="date" name="start" value="{{inspection.start_date.isoformat()}}">
+        <form class="inspection-filter" action="/observations" method="get" aria-label="தரவு ஆய்வு வடிகட்டி">
+            <label for="inspection-start">தொடக்கம்
+                <input id="inspection-start" type="date" name="start" value="{{inspection.start_date.isoformat()}}">
             </label>
-            <label>முடிவு
-                <input type="date" name="end" value="{{inspection.end_date.isoformat()}}">
+            <label for="inspection-end">முடிவு
+                <input id="inspection-end" type="date" name="end" value="{{inspection.end_date.isoformat()}}">
             </label>
-            <label>தரவு மூலம்
-                <select name="source">
+            <label for="inspection-source">தரவு மூலம்
+                <select id="inspection-source" name="source">
                     {% if not inspection.available_sources %}<option value="">தரவு மூலம் இல்லை</option>{% endif %}
                     {% for source in inspection.available_sources %}
                         <option value="{{source}}" {{'selected' if source == inspection.selected_source else ''}}>{{source}}</option>
                     {% endfor %}
                 </select>
             </label>
-            <button>ஆய்வு செய்</button>
+            <button type="submit">ஆய்வு செய்</button>
         </form>
     </header>
 
@@ -112,7 +113,8 @@
         </div>
         {% if inspection.recent_records %}
             <table class="observation-table">
-                <thead><tr><th>நேரம்</th><th>வகை</th><th>வெப்பநிலை</th><th>ஈரப்பதம்</th><th>மேகம்</th><th>மழை</th><th>காற்று</th><th>தரம்</th></tr></thead>
+                <caption class="sr-only">சமீபத்திய வானிலைப் பதிவு விவரங்கள்</caption>
+                <thead><tr><th scope="col">நேரம்</th><th scope="col">வகை</th><th scope="col">வெப்பநிலை</th><th scope="col">ஈரப்பதம்</th><th scope="col">மேகம்</th><th scope="col">மழை</th><th scope="col">காற்று</th><th scope="col">தரம்</th></tr></thead>
                 <tbody>{% for record in inspection.recent_records %}<tr>
                     <td data-label="நேரம்">{{record.observed_at_local|dashboard_datetime}}</td>
                     <td data-label="வகை"><span class="data-kind {{'interpolated' if record.is_interpolated else 'raw'}}">{{'இடைமதிப்பீடு' if record.is_interpolated else 'மூலத் தரவு'}}</span></td>

@@ -115,6 +115,7 @@ def test_invalid_year_falls_back_and_is_logged(client, caplog):
 
     assert response.status_code == 200
     assert 'value="2026"' in response.get_data(as_text=True)
+    assert 'ஆண்டு செல்லாது; இயல்புநிலை 2026' in response.get_data(as_text=True)
     assert 'Invalid year parameter' in caplog.text
 
 

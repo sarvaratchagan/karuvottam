@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="wrap forecast-page">
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap forecast-page" id="main-content" tabindex="-1">
     <a class="back" href="/?year={{year}}">← முதற்பக்கம்</a>
     <header class="forecast-header">
         <div>
@@ -19,11 +20,15 @@
         <a class="button-link" href="/prediction.csv?year={{year}}&mode={{mode}}">CSV பதிவிறக்கம்</a>
     </header>
 
+    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
+
     <nav class="forecast-controls" aria-label="முன்னறிவிப்பு காட்சி கட்டுப்பாடுகள்">
         <div class="tab-group" aria-label="கருவோட்ட மூலம்">
             <a class="tab {{'active' if mode == 'aadi' else ''}}"
+               {% if mode == 'aadi' %}aria-current="page"{% endif %}
                href="/prediction?year={{year}}&mode=aadi&view={{forecast_calendar.mode}}">ஆடி · 180 நாள்</a>
             <a class="tab {{'active' if mode == 'margazhi' else ''}}"
+               {% if mode == 'margazhi' %}aria-current="page"{% endif %}
                href="/prediction?year={{year}}&mode=margazhi&view={{forecast_calendar.mode}}">மார்கழி · 140 நாள்</a>
         </div>
         <div class="tab-group" aria-label="காலண்டர் அளவு">
@@ -49,9 +54,10 @@
     {% if forecast_calendar.mode == 'day' %}
         <div class="card tablewrap forecast-tablewrap">
             <table class="forecast-table">
+                <caption class="sr-only">{{days}} நாள் மழை முன்னறிவிப்பு விவரங்கள்</caption>
                 <thead><tr>
-                    <th>நாள்</th><th>தேதி</th><th>தனிப்பயன் தமிழ் தேதி</th><th>ஆய்வு மதிப்பெண்*</th>
-                    <th>மழை வகை</th><th>மழை நிகழ்தகவு</th><th>தரம் / முறை</th><th>நிலை</th>
+                    <th scope="col">நாள்</th><th scope="col">தேதி</th><th scope="col">தனிப்பயன் தமிழ் தேதி</th><th scope="col">ஆய்வு மதிப்பெண்*</th>
+                    <th scope="col">மழை வகை</th><th scope="col">மழை நிகழ்தகவு</th><th scope="col">தரம் / முறை</th><th scope="col">நிலை</th>
                 </tr></thead>
                 <tbody>
                 {% for item in forecast_calendar.entries %}

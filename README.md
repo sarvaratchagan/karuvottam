@@ -9,7 +9,7 @@
 - சந்திர நிகழ்வு provenance மற்றும் மார்கழி alternation உடன் தனி கருவோட்டக் காலண்டர்
 - நாள்/வாரம்/மாதம் மற்றும் CSV ஏற்றுமதியுடன் evidence-safe மழை முன்னறிவிப்பு நாட்காட்டி
 - raw/interpolated வேறுபாடு மற்றும் gaps உடன் வானிலை time-series ஆய்வுப் பக்கம்
-- தமிழ்-first இடைமுகம்
+- keyboard, screen-size மற்றும் semantic accessibility checks உடன் தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
 கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. வானிலை client மற்றும் ingestion உள்ளன; முகப்பிலுள்ள முன்னறிவிப்பு மதிப்புகள் இன்னும் விளக்க மதிப்புகள், அளவீடு செய்யப்பட்ட நிகழ்தகவுகள் அல்ல.
@@ -140,7 +140,9 @@ pytest
 இந்தச் சோதனைகள் பயன்பாட்டு import, முக்கியப் பக்கங்கள், தவறான ஆண்டு fallback மற்றும் பதிவு,
 18 நாள் / 264 மணி நேரச் சாளரங்கள், ஆண்டுதோறும் மாறும் மார்கழி சந்திர கட்டம், 180 / 140 நாள் கால இணைப்பு, migration rollback,
 foreign keys, uniqueness மற்றும் restart-க்குப் பிந்தைய database persistence ஆகியவற்றைச்
-சரிபார்க்கின்றன.
+சரிபார்க்கின்றன. முக்கிய தமிழ் UI வழித்தடங்களின் semantic structure, labelled controls,
+table/SVG accessible names, தவறான உள்ளீடு, no-data fallback மற்றும் responsive CSS-ஐ
+`tests/test_ui_acceptance.py` சரிபார்க்கிறது.
 
 ## விதி விவரக்குறிப்புகள்
 
@@ -162,3 +164,4 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [Evidence-gated probability calibration](docs/PROBABILITY_CALIBRATION_SPEC.md)
 - [நாள்/வாரம்/மாதம் மழை முன்னறிவிப்பு நாட்காட்டி மற்றும் CSV](docs/FORECAST_CALENDAR.md)
 - [வானிலைத் தரவு time-series மற்றும் gap ஆய்வு](docs/OBSERVATION_INSPECTION.md)
+- [UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்](docs/UI_ACCEPTANCE.md)

@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="wrap">
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
     <a class="back" href="/?year={{selected_year}}">← முதற்பக்கம்</a>
     <header class="calendar-header">
         <div>
@@ -15,13 +16,14 @@
             <h1>கருவோட்டக் காலண்டர்</h1>
             <p>{{selected_year}} ஆண்டிற்கான ஆடி மற்றும் மார்கழி கண்காணிப்புச் சாளரங்கள்</p>
         </div>
-        <form action="/calendar">
-            <label>ஆண்டு
-                <input name="year" type="number" value="{{selected_year}}" min="2020" max="2100">
-            </label>
-            <button>காட்டு</button>
+        <form action="/calendar" method="get" aria-label="காலண்டர் ஆண்டு தேர்வு">
+            <label for="calendar-year">ஆண்டு</label>
+                <input id="calendar-year" name="year" type="number" value="{{selected_year}}" min="2020" max="2100">
+            <button type="submit">காட்டு</button>
         </form>
     </header>
+
+    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
 
     {% if calendar.persistence_warning %}
         <section class="warnings" role="status"><p>{{calendar.persistence_warning}}</p></section>
@@ -64,9 +66,10 @@
         <h2>ஆண்டுதோறும் மாறும் தேர்வு</h2>
         <div class="alternation" aria-label="மார்கழி மாற்று வரிசை">
             {% for item in calendar.alternation %}
-                <div class="alternation-item {{'selected' if item.selected else ''}}">
+                <div class="alternation-item {{'selected' if item.selected else ''}}" {% if item.selected %}aria-current="date"{% endif %}>
                     <b>{{item.year}}</b>
                     <span>{{item.event_type_tamil}}</span>
+                    {% if item.selected %}<span class="sr-only">தேர்ந்தெடுக்கப்பட்ட ஆண்டு</span>{% endif %}
                 </div>
             {% endfor %}
         </div>
