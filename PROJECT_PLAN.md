@@ -498,6 +498,8 @@ karuvottam/
 
 **முடிவு:** மீண்டும் பயன்படுத்தக்கூடிய மதிப்பீட்டுத் தரவுத் தொகுப்பு.
 
+**செயலாக்க நிலை:** `evaluation-dataset-1.0` pipeline ஆண்டு வரம்பிற்குத் தேவையான ERA5 weather coverage-ஐ கணக்கிட்டு, bounded idempotent chunks-ஆக சேகரிக்கிறது. ஒவ்வொரு ஆடி/மார்கழி source window-மும் அதன் 180/140 local-day observed rainfall outcomes-உடன் stable key மூலம் இணைக்கப்படுகிறது. Source features, target rainfall, expected/observed/missing/interpolated/measurement-issue hours மற்றும் quality flags நிலையான UTF-8 CSV-ல் எழுதப்படுகின்றன. தனி gap report மற்றும் SHA-256 checksums, location/provider, lunar provenance, rule/model versions, transformations, raw-payload references மற்றும் ERA5-vs-gauge measurement வரம்புகளைக் கொண்ட manifest மீளுருவாக்கத்தைக் காக்கிறது. Missing hours zero-fill செய்யப்படுவதில்லை; incompatible interval அளவுகள் மழைத் தொகையில் சேர்க்கப்படுவதில்லை. 2015–2024 local reference build 91,368 hourly records-லிருந்து gap இல்லாத 3,200 linked daily rows உருவாக்கியது; CSV SHA-256 `221dd9f29b4deb6c43163eee02f1c3e19829adbdeed2d4b0d4d4702038dd07eb`.
+
 #### T6.2 — அடிப்படை மாதிரியுடன் ஒப்பீடு
 - கருவோட்டத் தரவு மட்டும்.
 - வழக்கமான வரலாற்று வானிலை / பருவ அடிப்படை மாதிரி.

@@ -1,9 +1,17 @@
 from html.parser import HTMLParser
+import importlib
 import re
 
 import pytest
 
 from app import app
+from karuvottam.calendar_view import CalendarViewService
+from karuvottam.data_access import DataAccess
+from karuvottam.observation_inspection import ObservationInspectionService
+from karuvottam.status_dashboard import StatusDashboardService
+
+
+app_module = importlib.import_module('app')
 
 
 TAMIL_TEXT = re.compile(r'[\u0B80-\u0BFF]')
@@ -35,6 +43,7 @@ class AccessibilityAuditParser(HTMLParser):
         self.in_button = 0
         self.button_text: list[str] = []
         self.in_title = 0
+        self.in_head = 0
         self.title_text: list[str] = []
         self.in_h1 = 0
         self.h1_text: list[str] = []
@@ -47,6 +56,8 @@ class AccessibilityAuditParser(HTMLParser):
             self.ids.append(element_id)
         if tag == 'html':
             self.html_lang = attributes.get('lang')
+        elif tag == 'head':
+            self.in_head += 1
         elif tag == 'main':
             self.main_ids.append(element_id)
         elif tag == 'a' and 'skip-link' in attributes.get('class', '').split():
@@ -54,7 +65,7 @@ class AccessibilityAuditParser(HTMLParser):
         elif tag == 'h1':
             self.h1_count += 1
             self.in_h1 += 1
-        elif tag == 'title':
+        elif tag == 'title' and self.in_head:
             self.title_count += 1
             self.in_title += 1
         elif tag == 'label':
@@ -88,11 +99,13 @@ class AccessibilityAuditParser(HTMLParser):
                 self.inaccessible_svgs += 1
 
     def handle_endtag(self, tag):
-        if tag == 'label':
+        if tag == 'head':
+            self.in_head -= 1
+        elif tag == 'label':
             self.in_label -= 1
         elif tag == 'button':
             self.in_button -= 1
-        elif tag == 'title':
+        elif tag == 'title' and self.in_title:
             self.in_title -= 1
         elif tag == 'h1':
             self.in_h1 -= 1
@@ -108,6 +121,42 @@ class AccessibilityAuditParser(HTMLParser):
 
 @pytest.fixture()
 def client():
+    app.config.update(TESTING=True)
+    with app.test_client() as test_client:
+        yield test_client
+
+
+@pytest.fixture()
+def no_data_client(tmp_path, monkeypatch):
+    data_access = DataAccess(tmp_path / 'unmigrated.sqlite3')
+    monkeypatch.setattr(
+        app_module,
+        'STATUS_DASHBOARD_SERVICE',
+        StatusDashboardService(
+            data_access,
+            app_module.WINDOW_ENGINE,
+            location_name=app_module.settings.location_name,
+            latitude=app_module.settings.latitude,
+            longitude=app_module.settings.longitude,
+            timezone_name=app_module.settings.timezone_name,
+        ),
+    )
+    monkeypatch.setattr(
+        app_module,
+        'CALENDAR_VIEW_SERVICE',
+        CalendarViewService(data_access, app_module.WINDOW_ENGINE),
+    )
+    monkeypatch.setattr(
+        app_module,
+        'OBSERVATION_INSPECTION_SERVICE',
+        ObservationInspectionService(
+            data_access,
+            location_name=app_module.settings.location_name,
+            latitude=app_module.settings.latitude,
+            longitude=app_module.settings.longitude,
+            timezone_name=app_module.settings.timezone_name,
+        ),
+    )
     app.config.update(TESTING=True)
     with app.test_client() as test_client:
         yield test_client
@@ -180,8 +229,8 @@ def test_invalid_ui_inputs_return_understandable_pages(client, path, expected_te
         ('/observations', 'தரவுத்தளம் தயாராக இல்லை'),
     ],
 )
-def test_no_data_states_are_explained_in_tamil(client, path, expected_text):
-    response = client.get(path)
+def test_no_data_states_are_explained_in_tamil(no_data_client, path, expected_text):
+    response = no_data_client.get(path)
 
     assert response.status_code == 200
     assert expected_text in response.get_data(as_text=True)

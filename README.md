@@ -80,6 +80,7 @@ python app.py
 | `karuvottam/calendar_view.py` | traceable ஆடி/மார்கழி காலண்டர் read model மற்றும் persistence நிலை |
 | `karuvottam/forecast_calendar.py` | நாள்/வாரம்/மாத forecast read models மற்றும் traceable CSV export |
 | `karuvottam/observation_inspection.py` | stored weather time-series, coverage, interpolation மற்றும் gap read model |
+| `karuvottam/evaluation_dataset.py` | பல ஆண்டு ERA5 collection, source-window/observed-rainfall join மற்றும் reproducible CSV/manifest export |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -165,3 +166,4 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [நாள்/வாரம்/மாதம் மழை முன்னறிவிப்பு நாட்காட்டி மற்றும் CSV](docs/FORECAST_CALENDAR.md)
 - [வானிலைத் தரவு time-series மற்றும் gap ஆய்வு](docs/OBSERVATION_INSPECTION.md)
 - [UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்](docs/UI_ACCEPTANCE.md)
+- [பல ஆண்டு reproducible மதிப்பீட்டுத் தரவுத்தொகுப்பு](docs/EVALUATION_DATASET.md)

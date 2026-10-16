@@ -81,7 +81,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T6.1 | Assemble a reproducible multi-year dataset | P2 | T1.5, T2.4, T3.2 | Todo | Unassigned | Historical windows and subsequent observed rainfall are linked; provider, gaps, transformations, and measurement differences are documented |
+| T6.1 | Assemble a reproducible multi-year dataset | P2 | T1.5, T2.4, T3.2 | Done | Unassigned | Historical windows and subsequent observed rainfall are linked; provider, gaps, transformations, and measurement differences are documented |
 | T6.2 | Implement baseline comparisons | P2 | T6.1, T4.3 | Todo | Unassigned | Karuvottam-only, seasonal/climatology baseline, and combined-feature approaches run over the same evaluation periods |
 | T6.3 | Implement evaluation metrics and reports | P2 | T6.2 | Todo | Unassigned | Appropriate classification, probability, and amount metrics are reported by season, month, and forecast horizon with limitations |
 | T6.4 | Implement time-series validation and versioning | P2 | T6.2, T6.3 | Todo | Unassigned | Past years train/configure rules and later years test them; leakage checks pass; dataset, rule, and model versions make results reproducible |
