@@ -8,6 +8,7 @@ from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
 from karuvottam.forecast_calendar import ForecastCalendarService
 from karuvottam.forecast_timeline import ForecastTimelineEngine
+from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
@@ -59,6 +60,10 @@ def test_app_imports():
     assert isinstance(
         app.extensions['forecast_calendar_service'], ForecastCalendarService
     )
+    assert isinstance(
+        app.extensions['observation_inspection_service'],
+        ObservationInspectionService,
+    )
 
 
 def test_home_contains_tamil_status_dashboard(client):
@@ -92,6 +97,7 @@ def test_calendar_view_displays_traceable_rules_and_lunar_events(client):
     [
         ('/', 'தன்னியக்க துல்லிய மழை முன்னறிவிப்பு திட்டம்'),
         ('/calendar?year=2026', 'கருவோட்டக் காலண்டர்'),
+        ('/observations', 'வானிலைத் தரவு ஆய்வு'),
         ('/prediction?year=2026&mode=aadi', '180 நாள் முன்னறிவிப்பு'),
         ('/prediction?year=2026&mode=margazhi', '140 நாள் முன்னறிவிப்பு'),
     ],
@@ -249,3 +255,23 @@ def test_prediction_csv_exports_traceable_no_data_rows(client):
     assert lines[0].startswith('day_number,target_date,tamil_date,status')
     assert 'observation_data_not_loaded' in lines[1]
     assert 'daily-timeline-1.0' in lines[1]
+
+
+def test_observation_page_shows_series_gaps_and_data_kinds(client):
+    page = client.get('/observations').get_data(as_text=True)
+
+    assert 'வெப்பநிலை' in page
+    assert 'ஈரப்பதம்' in page
+    assert 'மேக மூட்டம்' in page
+    assert 'மழை' in page
+    assert 'காற்றின் வேகம்' in page
+    assert 'மூலத் தரவு' in page
+    assert 'இடைமதிப்பீட்டுத் தரவு' in page
+    assert 'தரவு இடைவெளிகள்' in page
+
+
+def test_observation_page_handles_invalid_date_input(client):
+    response = client.get('/observations?start=bad&end=2026-01-01')
+
+    assert response.status_code == 200
+    assert 'YYYY-MM-DD வடிவில் செல்லுபடியாக' in response.get_data(as_text=True)

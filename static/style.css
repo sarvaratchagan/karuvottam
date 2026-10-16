@@ -70,6 +70,8 @@ p {
 .page-nav {
 	display: flex;
 	justify-content: flex-end;
+	gap: 18px;
+	flex-wrap: wrap;
 	margin: -12px 0 24px;
 }
 
@@ -448,6 +450,218 @@ code {
 	gap: 0 24px;
 }
 
+.observation-header {
+	align-items: center;
+}
+
+.inspection-filter {
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.inspection-filter label {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	font-size: 13px;
+}
+
+select {
+	font: inherit;
+	min-width: 170px;
+	padding: 10px 12px;
+	border: 1px solid #cbd5cf;
+	border-radius: 9px;
+	background: #fff;
+}
+
+.inspection-summary {
+	display: grid;
+	grid-template-columns: repeat(4,minmax(0,1fr));
+	gap: 12px;
+	margin: 18px 0;
+}
+
+.inspection-summary article {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	padding: 16px;
+	border: 1px solid #dce3df;
+	border-radius: 12px;
+	background: #fff;
+}
+
+.inspection-summary b {
+	font-size: 20px;
+}
+
+.inspection-summary small {
+	color: #647069;
+}
+
+.chart-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-bottom: 14px;
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: #edf3ee;
+	font-size: 13px;
+}
+
+.chart-legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+}
+
+.legend-dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+
+.raw-dot {
+	background: #245f3d;
+}
+
+.interpolated-dot {
+	border: 2px solid #b36516;
+	background: #fff0cf;
+}
+
+.legend-line {
+	display: inline-block;
+	width: 20px;
+	height: 2px;
+	background: #52705e;
+}
+
+.series-grid {
+	display: grid;
+	grid-template-columns: repeat(2,minmax(0,1fr));
+	gap: 14px;
+	margin-bottom: 18px;
+}
+
+.series-card {
+	position: relative;
+	padding: 18px;
+	border: 1px solid #dce3df;
+	border-radius: 15px;
+	background: #fff;
+	box-shadow: 0 8px 30px #1d3a2410;
+}
+
+.series-heading {
+	display: flex;
+	justify-content: space-between;
+	align-items: start;
+	gap: 10px;
+}
+
+.chart-scale {
+	display: flex;
+	justify-content: space-between;
+	margin: 4px 0;
+	color: #647069;
+	font-size: 11px;
+}
+
+.time-series-chart {
+	display: block;
+	width: 100%;
+	height: 190px;
+	border: 1px solid #edf0ee;
+	border-radius: 8px;
+	background: #fbfcfb;
+}
+
+.grid-line {
+	stroke: #dfe6e1;
+	stroke-width: .35;
+	vector-effect: non-scaling-stroke;
+}
+
+.series-line {
+	fill: none;
+	stroke: #52705e;
+	stroke-width: 1.5;
+	vector-effect: non-scaling-stroke;
+}
+
+.series-point.raw {
+	fill: #245f3d;
+	stroke: #fff;
+	stroke-width: .7;
+	vector-effect: non-scaling-stroke;
+}
+
+.series-point.interpolated {
+	fill: #fff0cf;
+	stroke: #b36516;
+	stroke-width: 1.5;
+	vector-effect: non-scaling-stroke;
+}
+
+.chart-dates {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 5px;
+	color: #647069;
+	font-size: 11px;
+}
+
+.empty-chart {
+	padding: 34px 16px;
+	border: 1px dashed #cbd5cf;
+	border-radius: 9px;
+	color: #647069;
+	text-align: center;
+}
+
+.gap-panel {
+	margin-bottom: 18px;
+}
+
+.gap-list {
+	display: grid;
+	grid-template-columns: repeat(2,minmax(0,1fr));
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.gap-list div {
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: #fff8e9;
+	font-size: 13px;
+}
+
+.data-kind {
+	display: inline-block;
+	padding: 4px 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 800;
+}
+
+.data-kind.raw {
+	background: #dff3e5;
+	color: #1b6339;
+}
+
+.data-kind.interpolated {
+	background: #fff0cf;
+	color: #755215;
+}
+
 .rule {
 	margin: 22px 0 8px;
 	padding: 13px;
@@ -656,6 +870,64 @@ th {
 
 	.period-summary dd {
 		margin-top: 4px;
+	}
+
+	.inspection-filter {
+		margin-top: 12px;
+		justify-content: stretch;
+	}
+
+	.inspection-filter label,.inspection-filter input,.inspection-filter select,.inspection-filter button {
+		width: 100%;
+	}
+
+	.inspection-summary,.series-grid,.gap-list {
+		grid-template-columns: 1fr;
+	}
+
+	.series-heading {
+		display: block;
+	}
+
+	.series-heading .pill {
+		margin-bottom: 8px;
+	}
+
+	.observation-tablewrap {
+		overflow: visible;
+	}
+
+	.observation-table,.observation-table tbody,.observation-table tr,.observation-table td {
+		display: block;
+		width: 100%;
+		min-width: 0;
+	}
+
+	.observation-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+	}
+
+	.observation-table tr {
+		margin-bottom: 12px;
+		padding: 10px 0;
+		border-bottom: 2px solid #dce3df;
+	}
+
+	.observation-table td {
+		display: grid;
+		grid-template-columns: minmax(110px,.7fr) 1.3fr;
+		gap: 10px;
+	}
+
+	.observation-table td::before {
+		content: attr(data-label);
+		color: #647069;
+		font-size: 12px;
+		font-weight: 700;
 	}
 
 	.timeline {

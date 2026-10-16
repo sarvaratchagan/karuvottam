@@ -476,6 +476,8 @@ karuvottam/
 
 **முடிவு:** ஆய்வாளர் கணிப்பு விதிகளுக்குப் பயன்படுத்திய தரவை ஆய்வு செய்ய முடியும்.
 
+**செயலாக்க நிலை:** `/observations` பக்கம் date/source filters, coverage மற்றும் raw/interpolated counts, வெப்பநிலை/ஈரப்பதம்/மேக மூட்டம்/மழை/காற்று dependency-free SVG time-series, field-level missing-value counts, hourly gap ranges மற்றும் சமீபத்திய 100 பதிவு விவரங்களை வழங்குகிறது. கோடுகள் உண்மையான இடைவெளிகளைக் கடந்து இணைக்கப்படாது; raw மற்றும் interpolation markers தனித்தனியாகத் தெரியும். UTC hourly cadence இந்திய `+05:30` local-date எல்லைகளுடன் சரியாக align செய்யப்படுகிறது. Configured location/தரவு/database இல்லாத நிலைகளும் தெளிவான தமிழ் fallback ஆகக் காட்டப்படுகின்றன.
+
 ### கட்டம் 6 — பின்னோக்குச் சோதனை மற்றும் அறிவியல் மதிப்பீடு
 
 #### T6.1 — பல ஆண்டு வரலாற்றுத் தரவு

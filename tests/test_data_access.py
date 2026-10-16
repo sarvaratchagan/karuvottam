@@ -210,9 +210,11 @@ def test_weather_observations_are_normalized_and_queryable(data_access):
             source='provider-a',
         )
         latest = work.weather_observations.latest_for_location(location.id)
+        sources = work.weather_observations.list_sources_for_location(location.id)
 
     assert results == (stored,)
     assert latest == stored
+    assert sources == ('provider-a',)
     assert stored.observed_at_utc == '2026-01-01T01:00:00Z'
     assert stored.observed_at_local == '2026-01-01T06:30:00+05:30'
     assert stored.precipitation_interval_start_utc == '2026-01-01T00:00:00Z'

@@ -619,6 +619,20 @@ class WeatherObservationRepository:
             ).fetchone()
         return None if row is None else _weather_observation_from_row(row)
 
+    def list_sources_for_location(self, location_id: int) -> tuple[str, ...]:
+        """Return distinct observation sources available for one location."""
+        if location_id < 1:
+            raise ValueError('location_id must be positive')
+        rows = self._connection.execute(
+            """
+            SELECT DISTINCT source FROM weather_observations
+            WHERE location_id = ?
+            ORDER BY source
+            """,
+            (location_id,),
+        ).fetchall()
+        return tuple(row['source'] for row in rows)
+
     def list_between(
         self,
         location_id: int,

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from flask import Flask, Response, render_template, request
 
@@ -12,6 +12,7 @@ from karuvottam.forecast_timeline import (
     unavailable_research_score,
 )
 from karuvottam.lunar_events import LunarEventEngine
+from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
@@ -103,9 +104,17 @@ STATUS_DASHBOARD_SERVICE = StatusDashboardService(
 )
 CALENDAR_VIEW_SERVICE = CalendarViewService(DATA_ACCESS, WINDOW_ENGINE)
 FORECAST_CALENDAR_SERVICE = ForecastCalendarService(CALENDAR_RULE)
+OBSERVATION_INSPECTION_SERVICE = ObservationInspectionService(
+    DATA_ACCESS,
+    location_name=settings.location_name,
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+)
 app.extensions['status_dashboard_service'] = STATUS_DASHBOARD_SERVICE
 app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
 app.extensions['forecast_calendar_service'] = FORECAST_CALENDAR_SERVICE
+app.extensions['observation_inspection_service'] = OBSERVATION_INSPECTION_SERVICE
 
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)
@@ -190,8 +199,15 @@ def quality_tamil(value):
         'invalid': 'செல்லாதது',
         'unavailable': 'தரவு இல்லை',
         'unvalidated_reanalysis': 'சரிபார்க்காத மறுபகுப்பாய்வு',
+        'missing': 'மதிப்புகள் விடுபட்டவை',
+        'out_of_range': 'வரம்பிற்கு வெளியே',
+        'duplicate': 'நகல் பதிவு',
+        'interpolated': 'இடைமதிப்பீடு',
+        'outside_window': 'கால வரம்பிற்கு வெளியே',
     }
-    return labels.get(value, value or 'தரவு இல்லை')
+    if not value:
+        return 'தரவு இல்லை'
+    return ' + '.join(labels.get(part, part) for part in value.split('+'))
 
 @app.route('/')
 def index():
@@ -291,6 +307,41 @@ def calendar_view():
         'calendar.html',
         calendar=calendar,
         selected_year=year,
+    )
+
+
+@app.route('/observations')
+def observations():
+    raw_start = request.args.get('start', '').strip()
+    raw_end = request.args.get('end', '').strip()
+    source = request.args.get('source', '').strip() or None
+    start_date = end_date = None
+    input_error = None
+    if raw_start or raw_end:
+        try:
+            if not raw_start or not raw_end:
+                raise ValueError
+            start_date = date.fromisoformat(raw_start)
+            end_date = date.fromisoformat(raw_end)
+        except ValueError:
+            input_error = (
+                'தொடக்கமும் முடிவும் YYYY-MM-DD வடிவில் செல்லுபடியாக உள்ளிடப்பட வேண்டும்.'
+            )
+            start_date = end_date = None
+    try:
+        inspection = OBSERVATION_INSPECTION_SERVICE.build(
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+        )
+    except ValueError as exc:
+        app.logger.warning('Invalid observation range: %s', exc)
+        input_error = 'தேதி வரம்பு செல்லாது அல்லது 366 நாட்களை மீறுகிறது.'
+        inspection = OBSERVATION_INSPECTION_SERVICE.build(source=source)
+    return render_template(
+        'observations.html',
+        inspection=inspection,
+        input_error=input_error,
     )
 
 if __name__ == '__main__':

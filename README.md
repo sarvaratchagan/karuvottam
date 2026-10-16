@@ -8,6 +8,7 @@
 - இடம், அடுத்த சாளரம், சமீபத்திய தரவு/முன்னறிவிப்பு மற்றும் எச்சரிக்கைகளைக் காட்டும் தமிழ் நிலை முகப்புப் பலகை
 - சந்திர நிகழ்வு provenance மற்றும் மார்கழி alternation உடன் தனி கருவோட்டக் காலண்டர்
 - நாள்/வாரம்/மாதம் மற்றும் CSV ஏற்றுமதியுடன் evidence-safe மழை முன்னறிவிப்பு நாட்காட்டி
+- raw/interpolated வேறுபாடு மற்றும் gaps உடன் வானிலை time-series ஆய்வுப் பக்கம்
 - தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
@@ -78,6 +79,7 @@ python app.py
 | `karuvottam/status_dashboard.py` | முகப்புப் பலகைக்கான location/window/latest-data/forecast நிலை read model |
 | `karuvottam/calendar_view.py` | traceable ஆடி/மார்கழி காலண்டர் read model மற்றும் persistence நிலை |
 | `karuvottam/forecast_calendar.py` | நாள்/வாரம்/மாத forecast read models மற்றும் traceable CSV export |
+| `karuvottam/observation_inspection.py` | stored weather time-series, coverage, interpolation மற்றும் gap read model |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -88,6 +90,7 @@ python app.py
 - `/prediction?year=2026&mode=aadi` — ஆடி அடிப்படையிலான 180 நாள் காட்சி
 - `/prediction?year=2026&mode=margazhi` — மார்கழி அடிப்படையிலான 140 நாள் காட்சி
 - `/prediction.csv?year=2026&mode=aadi` — தினசரி traceability fields உடன் UTF-8 forecast CSV
+- `/observations` — தேதி/source filters உடன் வானிலை நேரத் தொடர் மற்றும் gap ஆய்வு
 
 உற்பத்தி இயக்கத்தில் Flask development server பயன்படுத்தப்படக்கூடாது. தற்போதைய உள்ளூர் இயக்கம் `debug=False` உடன் மட்டுமே தொடங்குகிறது.
 
@@ -158,3 +161,4 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [Traceable 180/140 நாள் experimental timeline](docs/FORECAST_TIMELINE_SPEC.md)
 - [Evidence-gated probability calibration](docs/PROBABILITY_CALIBRATION_SPEC.md)
 - [நாள்/வாரம்/மாதம் மழை முன்னறிவிப்பு நாட்காட்டி மற்றும் CSV](docs/FORECAST_CALENDAR.md)
+- [வானிலைத் தரவு time-series மற்றும் gap ஆய்வு](docs/OBSERVATION_INSPECTION.md)

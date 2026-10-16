@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>வானிலைத் தரவு ஆய்வு</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="wrap observation-page">
+    <a class="back" href="/">← முதற்பக்கம்</a>
+    <header class="observation-header">
+        <div>
+            <div class="eyebrow">சேமிக்கப்பட்ட மணிநேரப் பதிவுகள்</div>
+            <h1>வானிலைத் தரவு ஆய்வு</h1>
+            <p>{{inspection.location_name}}</p>
+        </div>
+        <form class="inspection-filter" action="/observations">
+            <label>தொடக்கம்
+                <input type="date" name="start" value="{{inspection.start_date.isoformat()}}">
+            </label>
+            <label>முடிவு
+                <input type="date" name="end" value="{{inspection.end_date.isoformat()}}">
+            </label>
+            <label>தரவு மூலம்
+                <select name="source">
+                    {% if not inspection.available_sources %}<option value="">தரவு மூலம் இல்லை</option>{% endif %}
+                    {% for source in inspection.available_sources %}
+                        <option value="{{source}}" {{'selected' if source == inspection.selected_source else ''}}>{{source}}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button>ஆய்வு செய்</button>
+        </form>
+    </header>
+
+    {% if input_error %}<section class="warnings" role="alert"><p>{{input_error}}</p></section>{% endif %}
+    {% if inspection.warnings %}
+        <section class="warnings" role="status"><ul>{% for warning in inspection.warnings %}<li>{{warning}}</li>{% endfor %}</ul></section>
+    {% endif %}
+
+    <section class="inspection-summary" aria-label="தரவு சுருக்கம்">
+        <article><span class="status-label">கால வரம்பு</span><b>{{inspection.start_date.strftime('%d-%m-%Y')}} → {{inspection.end_date.strftime('%d-%m-%Y')}}</b></article>
+        <article><span class="status-label">மணிநேர நிறைவு</span><b>{{inspection.coverage_pct}}%</b><small>{{inspection.received_hours}} / {{inspection.expected_hours}}</small></article>
+        <article><span class="status-label">மூலப் பதிவுகள்</span><b>{{inspection.raw_count}}</b><small>interpolation இல்லை</small></article>
+        <article><span class="status-label">இடைமதிப்பீட்டுப் பதிவுகள்</span><b>{{inspection.interpolated_count}}</b><small>தனியாகக் குறிக்கப்பட்டவை</small></article>
+    </section>
+
+    <div class="chart-legend" aria-label="வரைபடக் குறியீடு">
+        <span><i class="legend-dot raw-dot"></i> மூலத் தரவு</span>
+        <span><i class="legend-dot interpolated-dot"></i> இடைமதிப்பீட்டுத் தரவு</span>
+        <span><i class="legend-line"></i> தொடர்ச்சியான மணிநேரங்கள் மட்டும் இணைக்கப்படும்</span>
+    </div>
+
+    <section class="series-grid" aria-label="வானிலை நேரத் தொடர்கள்">
+        {% for series in inspection.series %}
+            <article class="series-card">
+                <div class="series-heading">
+                    <div><span class="status-label">{{series.field_name}}</span><h2>{{series.label_tamil}}</h2></div>
+                    <span class="pill {{'pill-warning' if series.missing_value_count else 'pill-ok'}}">
+                        விடுபட்ட மதிப்புகள்: {{series.missing_value_count}}
+                    </span>
+                </div>
+                {% if series.points %}
+                    <div class="chart-scale"><span>{{'%g'|format(series.maximum)}} {{series.unit}}</span><span>{{'%g'|format(series.minimum)}} {{series.unit}}</span></div>
+                    <svg class="time-series-chart" viewBox="0 0 100 100" preserveAspectRatio="none"
+                         role="img" aria-label="{{series.label_tamil}} நேரத் தொடர்">
+                        <line x1="0" y1="5" x2="100" y2="5" class="grid-line"/>
+                        <line x1="0" y1="50" x2="100" y2="50" class="grid-line"/>
+                        <line x1="0" y1="95" x2="100" y2="95" class="grid-line"/>
+                        {% for segment in series.segments %}
+                            {% if segment|length > 1 %}
+                                <polyline class="series-line" points="{% for point in segment %}{{point.x_pct}},{{point.y_pct}} {% endfor %}"/>
+                            {% endif %}
+                        {% endfor %}
+                        {% for point in series.points %}
+                            <circle cx="{{point.x_pct}}" cy="{{point.y_pct}}" r="{{1.8 if point.is_interpolated else 1.25}}"
+                                    class="series-point {{'interpolated' if point.is_interpolated else 'raw'}}">
+                                <title>{{point.observed_at_local.strftime('%d-%m-%Y %H:%M')}} · {{point.value}} {{series.unit}} · {{'இடைமதிப்பீடு' if point.is_interpolated else 'மூலத் தரவு'}}</title>
+                            </circle>
+                        {% endfor %}
+                    </svg>
+                    <div class="chart-dates"><span>{{inspection.start_date.strftime('%d-%m-%Y')}}</span><span>{{inspection.end_date.strftime('%d-%m-%Y')}}</span></div>
+                {% else %}
+                    <div class="empty-chart">இந்த அளவீட்டிற்கு காட்சிப்படுத்தத் தரவு இல்லை.</div>
+                {% endif %}
+            </article>
+        {% endfor %}
+    </section>
+
+    <section class="card gap-panel">
+        <div class="section-heading">
+            <div><div class="eyebrow">முழுமையாக விடுபட்ட மணிநேரங்கள்</div><h2>தரவு இடைவெளிகள்</h2></div>
+            <span class="pill {{'pill-ok' if not inspection.gaps else 'pill-warning'}}">{{inspection.expected_hours - inspection.received_hours}} மணி</span>
+        </div>
+        {% if inspection.gaps %}
+            <div class="gap-list">
+                {% for gap in inspection.gaps[:100] %}
+                    <div><b>{{gap.missing_hours}} மணி</b><span>{{gap.start_local.strftime('%d-%m-%Y %H:%M')}} → {{gap.end_local.strftime('%d-%m-%Y %H:%M')}}</span></div>
+                {% endfor %}
+            </div>
+            {% if inspection.gaps|length > 100 %}<p class="foot">முதல் 100 இடைவெளிகள் மட்டும் காட்டப்படுகின்றன.</p>{% endif %}
+        {% else %}
+            <p>தேர்ந்தெடுத்த மூலம் மற்றும் காலத்தில் மணிநேர இடைவெளி இல்லை.</p>
+        {% endif %}
+    </section>
+
+    <section class="card tablewrap observation-tablewrap">
+        <div class="section-heading">
+            <div><div class="eyebrow">அதிகபட்சம் சமீபத்திய 100 பதிவுகள்</div><h2>பதிவு விவரங்கள்</h2></div>
+            <p class="foot">மொத்தம் {{inspection.records|length}} பதிவுகள்</p>
+        </div>
+        {% if inspection.recent_records %}
+            <table class="observation-table">
+                <thead><tr><th>நேரம்</th><th>வகை</th><th>வெப்பநிலை</th><th>ஈரப்பதம்</th><th>மேகம்</th><th>மழை</th><th>காற்று</th><th>தரம்</th></tr></thead>
+                <tbody>{% for record in inspection.recent_records %}<tr>
+                    <td data-label="நேரம்">{{record.observed_at_local|dashboard_datetime}}</td>
+                    <td data-label="வகை"><span class="data-kind {{'interpolated' if record.is_interpolated else 'raw'}}">{{'இடைமதிப்பீடு' if record.is_interpolated else 'மூலத் தரவு'}}</span></td>
+                    <td data-label="வெப்பநிலை">{{record.temperature_c if record.temperature_c is not none else '—'}} °C</td>
+                    <td data-label="ஈரப்பதம்">{{record.relative_humidity_pct if record.relative_humidity_pct is not none else '—'}}%</td>
+                    <td data-label="மேகம்">{{record.cloud_cover_pct if record.cloud_cover_pct is not none else '—'}}%</td>
+                    <td data-label="மழை">{{record.precipitation_mm if record.precipitation_mm is not none else '—'}} மி.மீ.</td>
+                    <td data-label="காற்று">{{record.wind_speed_kmh if record.wind_speed_kmh is not none else '—'}} கி.மீ./மணி</td>
+                    <td data-label="தரம்">{{record.quality_flag|quality_tamil}}</td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        {% else %}
+            <div class="empty-chart">பதிவு விவரங்கள் இல்லை.</div>
+        {% endif %}
+    </section>
+</main>
+</body>
+</html>
