@@ -588,6 +588,37 @@ class WeatherObservationRepository:
         ).fetchone()
         return None if row is None else _weather_observation_from_row(row)
 
+    def latest_for_location(
+        self,
+        location_id: int,
+        *,
+        source: str | None = None,
+    ) -> WeatherObservationRecord | None:
+        """Return the newest stored observation for one location."""
+        if location_id < 1:
+            raise ValueError('location_id must be positive')
+        if source is None:
+            row = self._connection.execute(
+                """
+                SELECT * FROM weather_observations
+                WHERE location_id = ?
+                ORDER BY observed_at_utc DESC, id DESC
+                LIMIT 1
+                """,
+                (location_id,),
+            ).fetchone()
+        else:
+            row = self._connection.execute(
+                """
+                SELECT * FROM weather_observations
+                WHERE location_id = ? AND source = ?
+                ORDER BY observed_at_utc DESC, id DESC
+                LIMIT 1
+                """,
+                (location_id, source),
+            ).fetchone()
+        return None if row is None else _weather_observation_from_row(row)
+
     def list_between(
         self,
         location_id: int,
@@ -702,6 +733,17 @@ class ForecastRepository:
         row = self._connection.execute(
             'SELECT * FROM prediction_runs WHERE id = ?',
             (run_id,),
+        ).fetchone()
+        return None if row is None else _prediction_run_from_row(row)
+
+    def latest_run(self) -> PredictionRunRecord | None:
+        """Return the most recently generated forecast run."""
+        row = self._connection.execute(
+            """
+            SELECT * FROM prediction_runs
+            ORDER BY COALESCE(generated_at, created_at) DESC, id DESC
+            LIMIT 1
+            """
         ).fetchone()
         return None if row is None else _prediction_run_from_row(row)
 

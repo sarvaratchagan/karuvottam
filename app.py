@@ -13,6 +13,7 @@ from karuvottam.lunar_events import LunarEventEngine
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
+from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     RawWeatherPayloadStore,
@@ -90,6 +91,15 @@ WINDOW_ENGINE = KaruvottamWindowEngine(
     margazhi_anchor_year=settings.margazhi_alternation_anchor_year,
     margazhi_anchor_phase=settings.margazhi_alternation_anchor_phase,
 )
+STATUS_DASHBOARD_SERVICE = StatusDashboardService(
+    DATA_ACCESS,
+    WINDOW_ENGINE,
+    location_name=settings.location_name,
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+)
+app.extensions['status_dashboard_service'] = STATUS_DASHBOARD_SERVICE
 
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)
@@ -155,10 +165,33 @@ def fmt(d):
 def fmt_datetime(value):
     return value.strftime('%d-%m-%Y %H:%M')
 
+
+@app.template_filter('dashboard_datetime')
+def dashboard_datetime(value):
+    if not value:
+        return 'தரவு இல்லை'
+    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    return parsed.astimezone(LOCATION_TIMEZONE).strftime('%d-%m-%Y %H:%M')
+
+
+@app.template_filter('quality_tamil')
+def quality_tamil(value):
+    labels = {
+        'valid': 'செல்லுபடியாகும்',
+        'verified': 'சரிபார்க்கப்பட்டது',
+        'calculated': 'கணக்கிடப்பட்டது',
+        'warning': 'எச்சரிக்கை',
+        'invalid': 'செல்லாதது',
+        'unavailable': 'தரவு இல்லை',
+        'unvalidated_reanalysis': 'சரிபார்க்காத மறுபகுப்பாய்வு',
+    }
+    return labels.get(value, value or 'தரவு இல்லை')
+
 @app.route('/')
 def index():
     year = requested_year()
     cycle = build_cycle(year)
+    dashboard = STATUS_DASHBOARD_SERVICE.build()
     lunar_events = [
         {
             'month_name': window.season_name_tamil,
@@ -177,6 +210,7 @@ def index():
         calendar_rule=CALENDAR_RULE,
         lunar_events=lunar_events,
         lunar_error=None,
+        dashboard=dashboard,
     )
 
 @app.route('/prediction')

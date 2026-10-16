@@ -44,6 +44,11 @@ h2 {
 	font-size: 26px;
 }
 
+h3 {
+	margin: 8px 0;
+	font-size: 19px;
+}
+
 p {
 	color: #58636d;
 }
@@ -56,6 +61,90 @@ p {
 
 .mb-25 {
     margin-bottom: 25px;
+}
+
+.dashboard {
+	margin-bottom: 25px;
+}
+
+.section-heading {
+	display: flex;
+	justify-content: space-between;
+	align-items: end;
+	gap: 18px;
+}
+
+.section-heading .foot {
+	margin-bottom: 14px;
+}
+
+.status-grid {
+	display: grid;
+	grid-template-columns: repeat(4,minmax(0,1fr));
+	gap: 12px;
+}
+
+.status-card {
+	background: #fff;
+	border: 1px solid #dce3df;
+	border-radius: 14px;
+	padding: 18px;
+}
+
+.status-card p {
+	margin: 7px 0;
+}
+
+.status-label {
+	display: block;
+	font-size: 12px;
+	font-weight: 800;
+	color: #52705e;
+	letter-spacing: .03em;
+}
+
+.pill {
+	display: inline-block;
+	margin-top: 8px;
+	padding: 5px 9px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 800;
+}
+
+.pill-ok {
+	background: #dff3e5;
+	color: #1b6339;
+}
+
+.pill-info {
+	background: #e1edf8;
+	color: #245271;
+}
+
+.pill-warning {
+	background: #fff0cf;
+	color: #755215;
+}
+
+.warnings {
+	margin-top: 12px;
+	padding: 15px 18px;
+	border-left: 4px solid #bc7a13;
+	border-radius: 10px;
+	background: #fff8e9;
+}
+
+.warnings h3,.warnings p,.warnings ul {
+	margin: 4px 0;
+}
+
+.warnings ul {
+	padding-left: 22px;
+}
+
+.warnings li + li {
+	margin-top: 5px;
 }
 
 .card {
@@ -168,8 +257,12 @@ th {
 }
 
 @media(max-width:760px) {
-	header,.grid {
+	header,.grid,.section-heading {
 		display: block;
+	}
+
+	.status-grid {
+		grid-template-columns: 1fr;
 	}
 
 	.card {

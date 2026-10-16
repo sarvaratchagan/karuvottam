@@ -9,6 +9,7 @@ from karuvottam.forecast_timeline import ForecastTimelineEngine
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
+from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     WeatherIngestionService,
@@ -49,6 +50,20 @@ def test_app_imports():
     assert isinstance(
         app.extensions['weather_ingestion_service'], WeatherIngestionService
     )
+    assert isinstance(
+        app.extensions['status_dashboard_service'], StatusDashboardService
+    )
+
+
+def test_home_contains_tamil_status_dashboard(client):
+    home = client.get('/?year=2026').get_data(as_text=True)
+
+    assert 'நிலை முகப்புப் பலகை' in home
+    assert 'செயலில் உள்ள இடம்' in home
+    assert 'கருவோட்டக் காலம்' in home
+    assert 'சமீபத்திய வானிலைத் தரவு' in home
+    assert 'கடைசி முன்னறிவிப்பு' in home
+    assert 'முக்கிய எச்சரிக்கைகள்' in home
 
 
 @pytest.mark.parametrize(

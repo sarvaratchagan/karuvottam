@@ -209,8 +209,10 @@ def test_weather_observations_are_normalized_and_queryable(data_access):
             datetime(2026, 1, 2, tzinfo=timezone.utc),
             source='provider-a',
         )
+        latest = work.weather_observations.latest_for_location(location.id)
 
     assert results == (stored,)
+    assert latest == stored
     assert stored.observed_at_utc == '2026-01-01T01:00:00Z'
     assert stored.observed_at_local == '2026-01-01T06:30:00+05:30'
     assert stored.precipitation_interval_start_utc == '2026-01-01T00:00:00Z'
@@ -356,9 +358,11 @@ def test_forecast_timeline_is_persisted_with_source_window_link(data_access):
 
     with data_access.transaction() as work:
         reloaded_run = work.forecasts.get_run(stored_run.id)
+        latest_run = work.forecasts.latest_run()
         entries = work.forecasts.list_entries(stored_run.id)
 
     assert reloaded_run == stored_run
+    assert latest_run == stored_run
     assert stored_run.input_window_id == stored_window.id
     assert stored_run.source_window_key == 'aadi:2026:1.0'
     assert stored_run.model_version == 'daily-timeline-1.0'

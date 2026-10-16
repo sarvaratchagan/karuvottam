@@ -5,6 +5,7 @@
 - ஆடி 18 நாள் → மார்கழி கருவோட்டம் முடிந்த மறுநாள் → 180 நாள் பொருத்தம்
 - மார்கழி 11 நாள் (இரவு/பகல் தொடர்ச்சி) → அடுத்த ஆண்டு ஆடி கருவோட்டம் முடிந்த மறுநாள் → 140 நாள் பொருத்தம்
 - 180/140 நாள் முன்னறிவிப்பு அட்டவணை UI
+- இடம், அடுத்த சாளரம், சமீபத்திய தரவு/முன்னறிவிப்பு மற்றும் எச்சரிக்கைகளைக் காட்டும் தமிழ் நிலை முகப்புப் பலகை
 - தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
@@ -72,6 +73,7 @@ python app.py
 | `karuvottam/rain_categories.py` | versioned 60 நிமிட மழை-அளவு வகைப்படுத்தல் |
 | `karuvottam/forecast_timeline.py` | traceable 180/140 நாள் experimental/no-data காலவரிசை |
 | `karuvottam/probability_calibration.py` | time-ordered Brier/reliability மதிப்பீடு மற்றும் probability publication gate |
+| `karuvottam/status_dashboard.py` | முகப்புப் பலகைக்கான location/window/latest-data/forecast நிலை read model |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
