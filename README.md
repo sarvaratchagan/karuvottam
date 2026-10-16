@@ -9,6 +9,7 @@
 - சந்திர நிகழ்வு provenance மற்றும் மார்கழி alternation உடன் தனி கருவோட்டக் காலண்டர்
 - நாள்/வாரம்/மாதம் மற்றும் CSV ஏற்றுமதியுடன் evidence-safe மழை முன்னறிவிப்பு நாட்காட்டி
 - raw/interpolated வேறுபாடு மற்றும் gaps உடன் வானிலை time-series ஆய்வுப் பக்கம்
+- ஒரே holdout காலத்தில் seasonal, Karuvottam-only மற்றும் combined baseline predictions
 - keyboard, screen-size மற்றும் semantic accessibility checks உடன் தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
@@ -81,6 +82,7 @@ python app.py
 | `karuvottam/forecast_calendar.py` | நாள்/வாரம்/மாத forecast read models மற்றும் traceable CSV export |
 | `karuvottam/observation_inspection.py` | stored weather time-series, coverage, interpolation மற்றும் gap read model |
 | `karuvottam/evaluation_dataset.py` | பல ஆண்டு ERA5 collection, source-window/observed-rainfall join மற்றும் reproducible CSV/manifest export |
+| `karuvottam/baseline_comparison.py` | leakage-aware seasonal, Karuvottam-only மற்றும் combined matched baseline predictions |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -167,3 +169,4 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [வானிலைத் தரவு time-series மற்றும் gap ஆய்வு](docs/OBSERVATION_INSPECTION.md)
 - [UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்](docs/UI_ACCEPTANCE.md)
 - [பல ஆண்டு reproducible மதிப்பீட்டுத் தரவுத்தொகுப்பு](docs/EVALUATION_DATASET.md)
+- [Seasonal / Karuvottam / combined அடிப்படை மாதிரி ஒப்பீடு](docs/BASELINE_COMPARISON.md)

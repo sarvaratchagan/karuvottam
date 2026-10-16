@@ -508,6 +508,8 @@ karuvottam/
 
 **முடிவு:** கருவோட்டத் தகவல் கூடுதல் மதிப்பு தருகிறதா அளவிடப்படுகிறது.
 
+**செயலாக்க நிலை:** `baseline-comparison-1.0` ஒரே time-ordered holdout row identities மீது மூன்று deterministic prediction streams உருவாக்குகிறது: target season/month training climatology (`seasonal-climatology-1.0`), source-window weather features மற்றும் exact forecast day அடிப்படையிலான Karuvottam-only nearest neighbours (`karuvottam-knn-1.0`), source features உடன் target month/horizon distance சேர்த்த combined nearest neighbours (`combined-knn-1.0`). Training years evaluation years-க்கு முன் இருக்க வேண்டும்; scaling மற்றும் neighbour selection training rows-ல் மட்டுமே நடக்கும்; holdout observed rainfall prediction logic-ல் நுழையாது. 2015–2021 training மற்றும் 2022–2024 evaluation reference run-ல் மூன்று approaches-க்கும் ஒரே 960 rows வீதம், மொத்தம் 2,880 available predictions உருவாக்கப்பட்டன. இந்த output performance முடிவு அல்ல; T6.3 metrics மற்றும் T6.4 validation அவசியம்.
+
 #### T6.3 — மதிப்பீட்டு அளவீடுகள்
 - மழை உண்டா / இல்லையா: precision, recall, F1, ROC-AUC (பொருத்தமானால்).
 - நிகழ்தகவு: Brier மதிப்பெண், reliability.
