@@ -72,7 +72,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
 | T5.1 | Build the Tamil status dashboard | P2 | T2.4, T3.2, T4.3 | Done | Unassigned | Active location, next window, latest data, quality status, latest forecast, and actionable warnings appear on one page |
-| T5.2 | Build the Karuvottam calendar view | P2 | T1.5, T3.2 | Todo | Unassigned | Aadi/Margazhi windows, selected lunar phase, alternation rule, start/end, and rule details are visible and traceable |
+| T5.2 | Build the Karuvottam calendar view | P2 | T1.5, T3.2 | Done | Unassigned | Aadi/Margazhi windows, selected lunar phase, alternation rule, start/end, and rule details are visible and traceable |
 | T5.3 | Build the rain-forecast calendar | P2 | T4.3, T2.5 | Todo | Unassigned | Day/week/month views show category, available probability, quality, method, experimental/no-data state, and CSV export; layout works on small screens |
 | T5.4 | Build the observation-data inspection page | P2 | T2.4, T3.2 | Todo | Unassigned | Time-series views cover required variables; raw/interpolated observations and missing intervals are visually distinct |
 | T5.5 | Add UI acceptance and accessibility checks | P2 | T5.1, T5.2, T5.3, T5.4 | Todo | Unassigned | Tamil renders correctly; invalid input and no-data states are understandable; key pages work on desktop/mobile and do not return unexplained 500 errors |

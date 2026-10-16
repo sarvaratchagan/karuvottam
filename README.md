@@ -6,6 +6,7 @@
 - மார்கழி 11 நாள் (இரவு/பகல் தொடர்ச்சி) → அடுத்த ஆண்டு ஆடி கருவோட்டம் முடிந்த மறுநாள் → 140 நாள் பொருத்தம்
 - 180/140 நாள் முன்னறிவிப்பு அட்டவணை UI
 - இடம், அடுத்த சாளரம், சமீபத்திய தரவு/முன்னறிவிப்பு மற்றும் எச்சரிக்கைகளைக் காட்டும் தமிழ் நிலை முகப்புப் பலகை
+- சந்திர நிகழ்வு provenance மற்றும் மார்கழி alternation உடன் தனி கருவோட்டக் காலண்டர்
 - தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
@@ -74,12 +75,14 @@ python app.py
 | `karuvottam/forecast_timeline.py` | traceable 180/140 நாள் experimental/no-data காலவரிசை |
 | `karuvottam/probability_calibration.py` | time-ordered Brier/reliability மதிப்பீடு மற்றும் probability publication gate |
 | `karuvottam/status_dashboard.py` | முகப்புப் பலகைக்கான location/window/latest-data/forecast நிலை read model |
+| `karuvottam/calendar_view.py` | traceable ஆடி/மார்கழி காலண்டர் read model மற்றும் persistence நிலை |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
 ## தற்போதைய வழித்தடங்கள்
 
 - `/` — ஆண்டு தேர்வு மற்றும் கருவோட்டச் சுழற்சி
+- `/calendar?year=2026` — சந்திர நிகழ்வு, alternation, நேர எல்லை மற்றும் விதியுடன் கருவோட்டக் காலண்டர்
 - `/prediction?year=2026&mode=aadi` — ஆடி அடிப்படையிலான 180 நாள் காட்சி
 - `/prediction?year=2026&mode=margazhi` — மார்கழி அடிப்படையிலான 140 நாள் காட்சி
 
@@ -141,6 +144,7 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [பட்சம் மற்றும் திதிகள் — பழைய v1 குறிப்பு](docs/TITHI_RULE_SPEC.md)
 - [சூரிய உதயம்/நிலைபெறுதல் — பழைய v1 குறிப்பு](docs/SUNRISE_SPEC.md)
 - [கருவோட்டக் கண்காணிப்புக் காலச் சாளர விதி](docs/WINDOW_SPEC.md)
+- [கருவோட்டக் காலண்டர் காட்சி](docs/CALENDAR_VIEW.md)
 - [வரலாற்று வானிலைத் தரவு வழங்குநர் மதிப்பீடு](docs/WEATHER_PROVIDER_EVALUATION.md)
 - [ERA5 weather client மற்றும் ingestion நடைமுறை](docs/WEATHER_INGESTION.md)
 - [Weather timestamp மற்றும் precipitation interval விதிகள்](docs/WEATHER_TIME_SPEC.md)

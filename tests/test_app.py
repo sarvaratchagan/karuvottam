@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app import app, build_cycle, forecast_period_after_window, karuvottam_window
+from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
 from karuvottam.forecast_timeline import ForecastTimelineEngine
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
@@ -53,6 +54,7 @@ def test_app_imports():
     assert isinstance(
         app.extensions['status_dashboard_service'], StatusDashboardService
     )
+    assert isinstance(app.extensions['calendar_view_service'], CalendarViewService)
 
 
 def test_home_contains_tamil_status_dashboard(client):
@@ -66,10 +68,26 @@ def test_home_contains_tamil_status_dashboard(client):
     assert 'முக்கிய எச்சரிக்கைகள்' in home
 
 
+def test_calendar_view_displays_traceable_rules_and_lunar_events(client):
+    page = client.get('/calendar?year=2026').get_data(as_text=True)
+
+    assert 'ஆடி கருவோட்டம்' in page
+    assert 'மார்கழி கருவோட்டம்' in page
+    assert 'பௌர்ணமி' in page
+    assert 'அமாவாசை' in page
+    assert '30-06-2026 05:27:17' in page
+    assert '09-12-2026 06:22:31' in page
+    assert 'Astronomy Engine 2.1.19' in page
+    assert '2026 = அமாவாசை' in page
+    assert '[தொடக்கம், முடிவு)' in page
+    assert 'கணக்கிடப்பட்டது; இன்னும் சேமிக்கப்படவில்லை' in page
+
+
 @pytest.mark.parametrize(
     ('path', 'expected_text'),
     [
         ('/', 'தன்னியக்க துல்லிய மழை முன்னறிவிப்பு திட்டம்'),
+        ('/calendar?year=2026', 'கருவோட்டக் காலண்டர்'),
         ('/prediction?year=2026&mode=aadi', '180 நாள் முன்னறிவிப்பு'),
         ('/prediction?year=2026&mode=margazhi', '140 நாள் முன்னறிவிப்பு'),
     ],

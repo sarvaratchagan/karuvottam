@@ -4,6 +4,7 @@ from flask import Flask, render_template, request
 
 from config import settings
 from karuvottam.calendar_engine import CalendarRule
+from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
 from karuvottam.forecast_timeline import (
     ForecastTimelineEngine,
@@ -99,7 +100,9 @@ STATUS_DASHBOARD_SERVICE = StatusDashboardService(
     longitude=settings.longitude,
     timezone_name=settings.timezone_name,
 )
+CALENDAR_VIEW_SERVICE = CalendarViewService(DATA_ACCESS, WINDOW_ENGINE)
 app.extensions['status_dashboard_service'] = STATUS_DASHBOARD_SERVICE
+app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
 
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)
@@ -254,6 +257,17 @@ def prediction():
         start=fmt(timeline.prediction_start),
         calendar_rule=CALENDAR_RULE,
         timeline=timeline,
+    )
+
+
+@app.route('/calendar')
+def calendar_view():
+    year = requested_year()
+    calendar = CALENDAR_VIEW_SERVICE.build(year)
+    return render_template(
+        'calendar.html',
+        calendar=calendar,
+        selected_year=year,
     )
 
 if __name__ == '__main__':
