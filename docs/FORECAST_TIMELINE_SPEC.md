@@ -43,6 +43,8 @@ The source-window key provides a readable domain link. Migration `003_prediction
 
 T4.2 categories apply only when a valid 60-minute rainfall amount exists. Applying them directly to a 0–100 research index would mix units and is prohibited. A later version may populate future categories only after a documented amount/category mapping is implemented and evaluated.
 
+`score-bin-calibration-1.0` provides a separate evidence-gated probability path. It does not alter `daily-timeline-1.0` while its real-data publication gate is unmet; probability fields therefore remain null in the current application.
+
 ## Hour-level rule boundary
 
 This version generates daily dates and does not silently apply the separate hour-level expansion rule. With the updated 11-day Margazhi window, an exact 140-day expansion would be `3360 / 264 = 12.727272…` future hours per observation hour, replacing the obsolete 13.55 value tied to the former 248-hour window. Hour-level output requires a separate versioned resampling specification before implementation.

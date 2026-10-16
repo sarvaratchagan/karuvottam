@@ -71,6 +71,7 @@ python app.py
 | `karuvottam/research_scoring.py` | probability அல்லாத deterministic 0–100 ஆய்வு மதிப்பெண் |
 | `karuvottam/rain_categories.py` | versioned 60 நிமிட மழை-அளவு வகைப்படுத்தல் |
 | `karuvottam/forecast_timeline.py` | traceable 180/140 நாள் experimental/no-data காலவரிசை |
+| `karuvottam/probability_calibration.py` | time-ordered Brier/reliability மதிப்பீடு மற்றும் probability publication gate |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -146,3 +147,4 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [Deterministic Karuvottam research-index விதிகள்](docs/RESEARCH_SCORING_SPEC.md)
 - [முடிந்த 60 நிமிட மழை-அளவு வகைகள்](docs/RAIN_CATEGORY_SPEC.md)
 - [Traceable 180/140 நாள் experimental timeline](docs/FORECAST_TIMELINE_SPEC.md)
+- [Evidence-gated probability calibration](docs/PROBABILITY_CALIBRATION_SPEC.md)

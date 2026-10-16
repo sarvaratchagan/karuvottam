@@ -433,6 +433,8 @@ karuvottam/
 
 **முடிவு:** நிகழ்தகவு காட்டப்பட்டால் அதன் அளவுத்திருத்தமும் மதிப்பீட்டுக் காலமும் ஆவணப்படுத்தப்பட்டுள்ளன.
 
+**செயலாக்க நிலை:** `score-bin-calibration-1.0` மூலம் source-window அடிப்படையிலான காலவரிசை train/evaluation பிரிப்பு, Brier score, climatology baseline, reliability bins, ECE மற்றும் evidence publication gate செயல்படுத்தப்பட்டுள்ளன. ஆனால் T6.1/T6.3/T6.4 உண்மையான பல-ஆண்டு தரவை வழங்கி gate-ஐ கடக்கும் வரை இந்தப் பணி “In Progress”; UI-இல் சதவீதம் மறைக்கப்பட்டே இருக்கும். Synthetic unit-test முடிவு அறிவியல் calibration ஆதாரம் அல்ல.
+
 ### கட்டம் 5 — நாட்காட்டி மற்றும் தமிழ் இடைமுகம்
 
 #### T5.1 — முகப்புப் பலகை
