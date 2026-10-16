@@ -6,6 +6,7 @@ from config import settings
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.data_access import DataAccess
 from karuvottam.lunar_events import LunarEventEngine
+from karuvottam.research_scoring import ResearchScoringEngine
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     RawWeatherPayloadStore,
@@ -40,6 +41,7 @@ app.config.from_mapping(
 )
 DATA_ACCESS = DataAccess(settings.database_path)
 WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
+RESEARCH_SCORING_ENGINE = ResearchScoringEngine()
 WEATHER_CSV_SERVICE = WeatherCsvService(DATA_ACCESS, WEATHER_QUALITY_VALIDATOR)
 WEATHER_CLIENT = OpenMeteoHistoricalClient(
     WEATHER_PROVIDER_SPEC,
@@ -58,6 +60,7 @@ app.extensions['data_access'] = DATA_ACCESS
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC
 app.extensions['weather_client'] = WEATHER_CLIENT
 app.extensions['weather_quality_validator'] = WEATHER_QUALITY_VALIDATOR
+app.extensions['research_scoring_engine'] = RESEARCH_SCORING_ENGINE
 app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
 
