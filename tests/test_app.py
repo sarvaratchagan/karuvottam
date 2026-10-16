@@ -6,6 +6,7 @@ import pytest
 from app import app, build_cycle, forecast_period_after_window, karuvottam_window
 from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
+from karuvottam.forecast_calendar import ForecastCalendarService
 from karuvottam.forecast_timeline import ForecastTimelineEngine
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
@@ -55,6 +56,9 @@ def test_app_imports():
         app.extensions['status_dashboard_service'], StatusDashboardService
     )
     assert isinstance(app.extensions['calendar_view_service'], CalendarViewService)
+    assert isinstance(
+        app.extensions['forecast_calendar_service'], ForecastCalendarService
+    )
 
 
 def test_home_contains_tamil_status_dashboard(client):
@@ -208,5 +212,40 @@ def test_prediction_table_has_expected_number_of_rows(client, mode, expected_row
     assert response.status_code == 200
     assert html.count('<tr>') - 1 == expected_rows
     assert 'தரவு இல்லை' in html
-    assert 'மழை நிகழ்தகவு' not in html
+    assert 'மழை நிகழ்தகவு' in html
+    assert 'வெளியிடப்படவில்லை' in html
     assert 'daily-timeline-1.0' in html
+
+
+@pytest.mark.parametrize(
+    ('view', 'card_count'),
+    [('week', 26), ('month', 7)],
+)
+def test_prediction_calendar_supports_week_and_month_views(
+    client, view, card_count
+):
+    response = client.get(f'/prediction?year=2026&mode=aadi&view={view}')
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert html.count('class="forecast-period-card"') == card_count
+    assert 'மழை வகை' in html
+    assert 'மழை நிகழ்தகவு' in html
+    assert 'கணிப்பு முறை' in html
+    assert 'தரவு இல்லாத நாட்கள்' in html
+
+
+def test_prediction_csv_exports_traceable_no_data_rows(client):
+    response = client.get('/prediction.csv?year=2026&mode=aadi')
+    csv_text = response.get_data(as_text=True)
+    lines = csv_text.splitlines()
+
+    assert response.status_code == 200
+    assert response.content_type == 'text/csv; charset=utf-8'
+    assert 'karuvottam-aadi-2026-forecast.csv' in response.headers[
+        'Content-Disposition'
+    ]
+    assert len(lines) == 181
+    assert lines[0].startswith('day_number,target_date,tamil_date,status')
+    assert 'observation_data_not_loaded' in lines[1]
+    assert 'daily-timeline-1.0' in lines[1]

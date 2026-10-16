@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, render_template, request
+from flask import Flask, Response, render_template, request
 
 from config import settings
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
+from karuvottam.forecast_calendar import ForecastCalendarService, VIEW_MODES
 from karuvottam.forecast_timeline import (
     ForecastTimelineEngine,
     unavailable_research_score,
@@ -101,8 +102,10 @@ STATUS_DASHBOARD_SERVICE = StatusDashboardService(
     timezone_name=settings.timezone_name,
 )
 CALENDAR_VIEW_SERVICE = CalendarViewService(DATA_ACCESS, WINDOW_ENGINE)
+FORECAST_CALENDAR_SERVICE = ForecastCalendarService(CALENDAR_RULE)
 app.extensions['status_dashboard_service'] = STATUS_DASHBOARD_SERVICE
 app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
+app.extensions['forecast_calendar_service'] = FORECAST_CALENDAR_SERVICE
 
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)
@@ -219,17 +222,42 @@ def index():
 @app.route('/prediction')
 def prediction():
     year = requested_year()
-    cycle = build_cycle(year)
+    mode = requested_prediction_mode()
+    view_mode = request.args.get('view', 'day')
+    if view_mode not in VIEW_MODES:
+        app.logger.warning(
+            'Invalid forecast view %r; using day',
+            view_mode,
+        )
+        view_mode = 'day'
+    timeline = build_prediction_timeline(year, mode)
+    forecast_calendar = FORECAST_CALENDAR_SERVICE.build(timeline, view_mode)
+    return render_template(
+        'prediction.html',
+        mode=mode,
+        year=year,
+        days=timeline.total_days,
+        start=fmt(timeline.prediction_start),
+        calendar_rule=CALENDAR_RULE,
+        timeline=timeline,
+        forecast_calendar=forecast_calendar,
+    )
+
+
+def requested_prediction_mode() -> str:
     mode = request.args.get('mode', 'aadi')
-    if mode not in {'aadi', 'margazhi'}:
-        mode = 'aadi'
+    return mode if mode in {'aadi', 'margazhi'} else 'aadi'
+
+
+def build_prediction_timeline(year: int, mode: str):
+    cycle = build_cycle(year)
     source_window = cycle[f'{mode}_window']
     mapping_basis_end = (
         cycle['margazhi_window'].end_datetime_local
         if mode == 'aadi'
         else cycle['next_aadi_window'].end_datetime_local
     )
-    timeline = FORECAST_TIMELINE_ENGINE.generate(
+    return FORECAST_TIMELINE_ENGINE.generate(
         source_window,
         mapping_basis_end_local=mapping_basis_end,
         research_score=unavailable_research_score(
@@ -237,26 +265,21 @@ def prediction():
         ),
         generated_at=datetime.now(timezone.utc),
     )
-    rows = []
-    for entry in timeline.entries:
-        tamil_date = CALENDAR_RULE.from_gregorian(entry.target_date)
-        rows.append({
-            'day': entry.day_number,
-            'date': fmt(entry.target_date),
-            'tamil_date': tamil_date.format_tamil(),
-            'research_score': entry.research_score,
-            'intensity': 'தரவு இல்லை',
-            'status': 'தரவு இல்லை',
-        })
-    return render_template(
-        'prediction.html',
-        rows=rows,
-        mode=mode,
-        year=year,
-        days=timeline.total_days,
-        start=fmt(timeline.prediction_start),
-        calendar_rule=CALENDAR_RULE,
-        timeline=timeline,
+
+
+@app.route('/prediction.csv')
+def prediction_csv():
+    year = requested_year()
+    mode = requested_prediction_mode()
+    timeline = build_prediction_timeline(year, mode)
+    csv_data = FORECAST_CALENDAR_SERVICE.export_csv(timeline)
+    filename = f'karuvottam-{mode}-{year}-forecast.csv'
+    return Response(
+        csv_data,
+        content_type='text/csv; charset=utf-8',
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"',
+        },
     )
 
 
