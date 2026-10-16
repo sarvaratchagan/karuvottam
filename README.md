@@ -70,6 +70,7 @@ python app.py
 | `karuvottam/weather_csv.py` | preview-first UTF-8 weather CSV import மற்றும் export |
 | `karuvottam/research_scoring.py` | probability அல்லாத deterministic 0–100 ஆய்வு மதிப்பெண் |
 | `karuvottam/rain_categories.py` | versioned 60 நிமிட மழை-அளவு வகைப்படுத்தல் |
+| `karuvottam/forecast_timeline.py` | traceable 180/140 நாள் experimental/no-data காலவரிசை |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -111,6 +112,7 @@ python app.py
 python -m karuvottam.database migrate
 ```
 
+T4.3 prediction traceability columns-ஐ சேர்க்கவும் இந்தக் கட்டளையை இயக்க வேண்டும்.
 இந்த கட்டளையை மீண்டும் இயக்குவது பாதுகாப்பானது. விரிவான schema மற்றும் migration
 விதிகள் [docs/DATABASE.md](docs/DATABASE.md)-இல் உள்ளன. PostgreSQL server வெளியீட்டிற்கான
 திட்டமிட்ட மாற்றுப் பாதையும் அதில் பதிவு செய்யப்பட்டுள்ளது.
@@ -143,3 +145,4 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [Weather CSV import மற்றும் export ஒப்பந்தம்](docs/WEATHER_CSV.md)
 - [Deterministic Karuvottam research-index விதிகள்](docs/RESEARCH_SCORING_SPEC.md)
 - [முடிந்த 60 நிமிட மழை-அளவு வகைகள்](docs/RAIN_CATEGORY_SPEC.md)
+- [Traceable 180/140 நாள் experimental timeline](docs/FORECAST_TIMELINE_SPEC.md)

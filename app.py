@@ -1,10 +1,14 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Flask, render_template, request
 
 from config import settings
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.data_access import DataAccess
+from karuvottam.forecast_timeline import (
+    ForecastTimelineEngine,
+    unavailable_research_score,
+)
 from karuvottam.lunar_events import LunarEventEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
@@ -44,6 +48,7 @@ DATA_ACCESS = DataAccess(settings.database_path)
 WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
 RESEARCH_SCORING_ENGINE = ResearchScoringEngine()
 RAIN_CATEGORY_ENGINE = RainCategoryEngine()
+FORECAST_TIMELINE_ENGINE = ForecastTimelineEngine(settings.timezone)
 WEATHER_CSV_SERVICE = WeatherCsvService(DATA_ACCESS, WEATHER_QUALITY_VALIDATOR)
 WEATHER_CLIENT = OpenMeteoHistoricalClient(
     WEATHER_PROVIDER_SPEC,
@@ -64,6 +69,7 @@ app.extensions['weather_client'] = WEATHER_CLIENT
 app.extensions['weather_quality_validator'] = WEATHER_QUALITY_VALIDATOR
 app.extensions['research_scoring_engine'] = RESEARCH_SCORING_ENGINE
 app.extensions['rain_category_engine'] = RAIN_CATEGORY_ENGINE
+app.extensions['forecast_timeline_engine'] = FORECAST_TIMELINE_ENGINE
 app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
 
@@ -175,30 +181,42 @@ def prediction():
     year = requested_year()
     cycle = build_cycle(year)
     mode = request.args.get('mode', 'aadi')
-    start = cycle['aadi_prediction_start'] if mode == 'aadi' else cycle['margazhi_prediction_start']
-    days = 180 if mode == 'aadi' else 140
+    if mode not in {'aadi', 'margazhi'}:
+        mode = 'aadi'
+    source_window = cycle[f'{mode}_window']
+    mapping_basis_end = (
+        cycle['margazhi_window'].end_datetime_local
+        if mode == 'aadi'
+        else cycle['next_aadi_window'].end_datetime_local
+    )
+    timeline = FORECAST_TIMELINE_ENGINE.generate(
+        source_window,
+        mapping_basis_end_local=mapping_basis_end,
+        research_score=unavailable_research_score(
+            'observation_data_not_loaded'
+        ),
+        generated_at=datetime.now(timezone.utc),
+    )
     rows = []
-    # MVP placeholder forecast: transparent demo values, not scientific predictions.
-    for i in range(days):
-        d = start + timedelta(days=i)
-        probability = round(35 + 25 * ((i % 14) / 13), 1)
-        intensity = 'மழையின்மை' if probability < 45 else ('தூறல்' if probability < 60 else 'மிதமான மழை')
-        tamil_date = CALENDAR_RULE.from_gregorian(d)
+    for entry in timeline.entries:
+        tamil_date = CALENDAR_RULE.from_gregorian(entry.target_date)
         rows.append({
-            'day': i + 1,
-            'date': fmt(d),
+            'day': entry.day_number,
+            'date': fmt(entry.target_date),
             'tamil_date': tamil_date.format_tamil(),
-            'probability': probability,
-            'intensity': intensity,
+            'research_score': entry.research_score,
+            'intensity': 'தரவு இல்லை',
+            'status': 'தரவு இல்லை',
         })
     return render_template(
         'prediction.html',
         rows=rows,
         mode=mode,
         year=year,
-        days=days,
-        start=fmt(start),
+        days=timeline.total_days,
+        start=fmt(timeline.prediction_start),
         calendar_rule=CALENDAR_RULE,
+        timeline=timeline,
     )
 
 if __name__ == '__main__':

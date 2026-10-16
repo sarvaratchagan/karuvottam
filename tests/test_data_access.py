@@ -12,7 +12,9 @@ from karuvottam.data_access import (
     WeatherObservation,
 )
 from karuvottam.database import migrate_database
+from karuvottam.forecast_timeline import ForecastTimelineEngine
 from karuvottam.lunar_events import LunarEvent
+from karuvottam.research_scoring import ResearchScore
 from karuvottam.sunrise import SunriseResult
 from karuvottam.windows import KaruvottamWindow
 
@@ -317,3 +319,53 @@ def test_precipitation_interval_is_validated(
                     precipitation_interval_minutes=minutes,
                 )
             )
+
+
+def test_forecast_timeline_is_persisted_with_source_window_link(data_access):
+    event = _lunar_event()
+    source_window = _window(event)
+    score = ResearchScore(
+        status='available',
+        score=73.5,
+        maximum_score=100.0,
+        model_version='research-index-1.0',
+        label='experimental_research_index_not_probability',
+        quality_flag='valid',
+        reason_codes=(),
+        components=(),
+    )
+    timeline = ForecastTimelineEngine(LOCAL_TIMEZONE).generate(
+        source_window,
+        mapping_basis_end_local=datetime(
+            2026, 12, 20, 6, 22, tzinfo=LOCAL_TIMEZONE
+        ),
+        research_score=score,
+        generated_at=datetime(2026, 12, 20, 1, tzinfo=timezone.utc),
+    )
+
+    with data_access.transaction() as work:
+        stored_event = work.lunar_events.add(event)
+        stored_window = work.karuvottam_windows.add(
+            source_window,
+            trigger_event_id=stored_event.id,
+        )
+        stored_run = work.forecasts.add_timeline(
+            timeline,
+            input_window_id=stored_window.id,
+        )
+
+    with data_access.transaction() as work:
+        reloaded_run = work.forecasts.get_run(stored_run.id)
+        entries = work.forecasts.list_entries(stored_run.id)
+
+    assert reloaded_run == stored_run
+    assert stored_run.input_window_id == stored_window.id
+    assert stored_run.source_window_key == 'aadi:2026:1.0'
+    assert stored_run.model_version == 'daily-timeline-1.0'
+    assert len(entries) == 180
+    assert entries[0].status == 'experimental'
+    assert entries[0].research_score == 73.5
+    assert entries[0].rain_probability_pct is None
+    assert entries[0].predicted_rain_mm is None
+    assert entries[0].rain_category is None
+    assert entries[0].reason_codes == ('rain_amount_model_not_defined',)

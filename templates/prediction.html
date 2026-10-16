@@ -17,8 +17,9 @@
                 <th>நாள்</th>
                 <th>தேதி</th>
                 <th>தனிப்பயன் தமிழ் தேதி</th>
-                <th>மழை நிகழ்தகவு*</th>
-                <th>தீவிரம்*</th>
+                <th>ஆய்வு மதிப்பெண்*</th>
+                <th>மழை வகை</th>
+                <th>நிலை</th>
             </tr>
             </thead>
             <tbody>{% for r in rows %}
@@ -26,8 +27,9 @@
                 <td>{{r.day}}</td>
                 <td>{{r.date}}</td>
                 <td>{{r.tamil_date}}</td>
-                <td>{{r.probability}}%</td>
+                <td>{{r.research_score if r.research_score is not none else '—'}}</td>
                 <td>{{r.intensity}}</td>
+                <td>{{r.status}}</td>
             </tr>
             {% endfor %}
             </tbody>
@@ -35,6 +37,10 @@
     </div>
     <p class="foot">நாட்காட்டி விதி: {{calendar_rule.reference_label}} = சித்திரை 1;
         பதிப்பு {{calendar_rule.version}}. இது அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல.</p>
-    <p class="foot">* MVP விளக்க மதிப்புகள் மட்டுமே. இவை அளவீடு செய்யப்பட்ட மழை நிகழ்தகவுகள் அல்ல.</p></main>
+    <p class="foot">மூலச் சாளரம்: {{timeline.source_window_key}} • காலவரிசை விதி:
+        {{timeline.timeline_model_version}} • மதிப்பெண் விதி: {{timeline.score_model_version}} •
+        மழை வகை விதி: {{timeline.category_threshold_version}}</p>
+    <p class="foot">* ஆய்வு மதிப்பெண் நிகழ்தகவு அல்ல. எதிர்கால மழை அளவு விதி இன்னும் வரையறுக்கப்படாததால்,
+        உள்ளீட்டுத் தரவு இணைக்கப்படாத நாள்கள் “தரவு இல்லை” என மட்டுமே காட்டப்படுகின்றன.</p></main>
 </body>
 </html>

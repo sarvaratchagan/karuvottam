@@ -5,6 +5,7 @@ import pytest
 
 from app import app, build_cycle, forecast_period_after_window, karuvottam_window
 from karuvottam.data_access import DataAccess
+from karuvottam.forecast_timeline import ForecastTimelineEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
 from karuvottam.weather_client import (
@@ -36,6 +37,9 @@ def test_app_imports():
     )
     assert isinstance(app.extensions['research_scoring_engine'], ResearchScoringEngine)
     assert isinstance(app.extensions['rain_category_engine'], RainCategoryEngine)
+    assert isinstance(
+        app.extensions['forecast_timeline_engine'], ForecastTimelineEngine
+    )
     assert isinstance(app.extensions['weather_csv_service'], WeatherCsvService)
     assert isinstance(
         app.extensions['weather_ingestion_service'], WeatherIngestionService
@@ -165,3 +169,6 @@ def test_prediction_table_has_expected_number_of_rows(client, mode, expected_row
 
     assert response.status_code == 200
     assert html.count('<tr>') - 1 == expected_rows
+    assert 'தரவு இல்லை' in html
+    assert 'மழை நிகழ்தகவு' not in html
+    assert 'daily-timeline-1.0' in html
