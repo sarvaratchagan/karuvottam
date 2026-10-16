@@ -5,6 +5,7 @@ import pytest
 
 from app import app, build_cycle, forecast_period_after_window, karuvottam_window
 from karuvottam.data_access import DataAccess
+from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
@@ -34,6 +35,7 @@ def test_app_imports():
         app.extensions['weather_quality_validator'], WeatherQualityValidator
     )
     assert isinstance(app.extensions['research_scoring_engine'], ResearchScoringEngine)
+    assert isinstance(app.extensions['rain_category_engine'], RainCategoryEngine)
     assert isinstance(app.extensions['weather_csv_service'], WeatherCsvService)
     assert isinstance(
         app.extensions['weather_ingestion_service'], WeatherIngestionService

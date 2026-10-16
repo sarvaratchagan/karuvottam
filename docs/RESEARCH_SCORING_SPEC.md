@@ -52,4 +52,4 @@ Unavailable results contain `score=None`. Identical input records and quality re
 
 ## Limitations
 
-This version does not establish causality, forecast horizon, rain category, rainfall amount, or calibrated confidence. It summarizes conditions observed during a Karuvottam window. T4.2 will define rain categories independently; T4.3 will map traceable outputs to dates; T6 will determine whether this index adds value over seasonal/climatology baselines.
+This version does not establish causality, forecast horizon, rainfall amount, or calibrated confidence. It summarizes conditions observed during a Karuvottam window. T4.2 categories are defined independently in [RAIN_CATEGORY_SPEC.md](RAIN_CATEGORY_SPEC.md); T4.3 will map traceable outputs to dates; T6 will determine whether this index adds value over seasonal/climatology baselines.

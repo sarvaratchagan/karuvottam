@@ -63,7 +63,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
 | T4.1 | Define and implement deterministic research scoring rules | P2 | T1.5, T2.4 | Done | Unassigned | Inputs, rationale, thresholds, output, and limitations are documented; identical input gives identical output; the score is not presented as probability |
-| T4.2 | Define rain categories | P2 | T4.1 | Todo | Unassigned | No-rain, drizzle, moderate, and heavy thresholds specify amount and interval; boundary-value tests pass |
+| T4.2 | Define rain categories | P2 | T4.1 | Done | Unassigned | No-rain, drizzle, moderate, and heavy thresholds specify amount and interval; boundary-value tests pass |
 | T4.3 | Generate 180/140-day experimental forecast timelines | P2 | T1.1, T1.5, T3.2, T4.1, T4.2 | Todo | Unassigned | Target timestamps are correct; every output links to its source window, rule/model version, generation time, and quality; missing inputs produce “no data,” not invented values |
 | T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | Todo | Unassigned | Time-ordered training/evaluation produces documented Brier/reliability results; percentages remain hidden until sufficient calibration evidence exists |
 
