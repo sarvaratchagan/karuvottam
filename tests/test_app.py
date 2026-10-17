@@ -3,15 +3,26 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app import app, build_cycle, forecast_period_after_window, karuvottam_window
+from app import (
+    app,
+    build_cycle,
+    build_prediction_context,
+    build_prediction_timeline,
+    forecast_period_after_window,
+    karuvottam_window,
+)
 from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
 from karuvottam.forecast_calendar import ForecastCalendarService
-from karuvottam.forecast_timeline import ForecastTimelineEngine
+from karuvottam.forecast_inputs import StoredForecastInputService
+from karuvottam.forecast_timeline import (
+    ForecastTimelineEngine,
+    unavailable_research_score,
+)
 from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
-from karuvottam.research_scoring import ResearchScoringEngine
+from karuvottam.research_scoring import ResearchScore, ResearchScoringEngine
 from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
@@ -52,6 +63,9 @@ def test_app_imports():
     assert isinstance(app.extensions['weather_csv_service'], WeatherCsvService)
     assert isinstance(
         app.extensions['weather_ingestion_service'], WeatherIngestionService
+    )
+    assert isinstance(
+        app.extensions['forecast_input_service'], StoredForecastInputService
     )
     assert isinstance(
         app.extensions['status_dashboard_service'], StatusDashboardService
@@ -117,6 +131,16 @@ def test_invalid_year_falls_back_and_is_logged(client, caplog):
     assert 'value="2026"' in response.get_data(as_text=True)
     assert 'ஆண்டு செல்லாது; இயல்புநிலை 2026' in response.get_data(as_text=True)
     assert 'Invalid year parameter' in caplog.text
+
+
+def test_historical_dataset_start_year_is_selectable(client):
+    response = client.get('/?year=2015')
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert 'value="2015"' in html
+    assert 'min="2015"' in html
+    assert 'ஆண்டு 2015–2100 வரம்பில் இருக்க வேண்டும்' not in html
 
 
 def test_ui_identifies_custom_calendar_rule(client):
@@ -218,9 +242,9 @@ def test_prediction_table_has_expected_number_of_rows(client, mode, expected_row
 
     assert response.status_code == 200
     assert html.count('<tr>') - 1 == expected_rows
-    assert 'தரவு இல்லை' in html
     assert 'மழை நிகழ்தகவு' in html
     assert 'வெளியிடப்படவில்லை' in html
+    assert 'கற்பனை மதிப்புகள் காட்டப்படாது' in html
     assert 'daily-timeline-1.0' in html
 
 
@@ -242,7 +266,25 @@ def test_prediction_calendar_supports_week_and_month_views(
     assert 'தரவு இல்லாத நாட்கள்' in html
 
 
-def test_prediction_csv_exports_traceable_no_data_rows(client):
+def test_prediction_csv_exports_traceable_no_data_rows(client, monkeypatch):
+    class MissingInputService:
+        @staticmethod
+        def score(_window):
+            return type(
+                'InputResult',
+                (),
+                {
+                    'research_score': unavailable_research_score(
+                        'source_window_observations_not_found'
+                    )
+                },
+            )()
+
+    monkeypatch.setitem(
+        build_prediction_context.__globals__,
+        'FORECAST_INPUT_SERVICE',
+        MissingInputService(),
+    )
     response = client.get('/prediction.csv?year=2026&mode=aadi')
     csv_text = response.get_data(as_text=True)
     lines = csv_text.splitlines()
@@ -254,8 +296,51 @@ def test_prediction_csv_exports_traceable_no_data_rows(client):
     ]
     assert len(lines) == 181
     assert lines[0].startswith('day_number,target_date,tamil_date,status')
-    assert 'observation_data_not_loaded' in lines[1]
+    assert 'source_window_observations_not_found' in lines[1]
     assert 'daily-timeline-1.0' in lines[1]
+
+
+def test_prediction_route_uses_available_stored_window_score(client, monkeypatch):
+    score = ResearchScore(
+        status='available',
+        score=73.5,
+        maximum_score=100,
+        model_version='research-index-1.0',
+        label='experimental_research_index_not_probability',
+        quality_flag='valid',
+        reason_codes=(),
+        components=(),
+    )
+
+    class AvailableInputService:
+        @staticmethod
+        def score(_window):
+            return type(
+                'InputResult',
+                (),
+                {
+                    'research_score': score,
+                    'source': 'open-meteo:era5',
+                    'received_hours': 432,
+                    'expected_hours': 432,
+                    'coverage_pct': 100.0,
+                },
+            )()
+
+    monkeypatch.setitem(
+        build_prediction_context.__globals__,
+        'FORECAST_INPUT_SERVICE',
+        AvailableInputService(),
+    )
+
+    html = client.get('/prediction?year=2020&mode=aadi').get_data(as_text=True)
+
+    assert '73.5' in html
+    assert 'ஆராய்ச்சி நிலை' in html
+    assert 'வெளியிடப்படவில்லை' in html
+    assert 'status-experimental' in html
+    assert 'open-meteo:era5' in html
+    assert '432 / 432' in html
 
 
 def test_observation_page_shows_series_gaps_and_data_kinds(client):

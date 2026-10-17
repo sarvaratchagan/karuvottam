@@ -7,9 +7,9 @@ from karuvottam.calendar_engine import CalendarRule
 from karuvottam.calendar_view import CalendarViewService
 from karuvottam.data_access import DataAccess
 from karuvottam.forecast_calendar import ForecastCalendarService, VIEW_MODES
+from karuvottam.forecast_inputs import StoredForecastInputService
 from karuvottam.forecast_timeline import (
     ForecastTimelineEngine,
-    unavailable_research_score,
 )
 from karuvottam.lunar_events import LunarEventEngine
 from karuvottam.observation_inspection import ObservationInspectionService
@@ -69,6 +69,16 @@ WEATHER_INGESTION_SERVICE = WeatherIngestionService(
     RawWeatherPayloadStore(settings.weather_raw_data_dir),
     WEATHER_QUALITY_VALIDATOR,
 )
+FORECAST_INPUT_SERVICE = StoredForecastInputService(
+    DATA_ACCESS,
+    RESEARCH_SCORING_ENGINE,
+    WEATHER_QUALITY_VALIDATOR,
+    location_name=settings.location_name,
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+    source=f'{WEATHER_PROVIDER_SPEC.key}:{WEATHER_PROVIDER_SPEC.model}',
+)
 app.extensions['data_access'] = DATA_ACCESS
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC
 app.extensions['weather_client'] = WEATHER_CLIENT
@@ -79,6 +89,7 @@ app.extensions['forecast_timeline_engine'] = FORECAST_TIMELINE_ENGINE
 app.extensions['probability_calibration_engine'] = PROBABILITY_CALIBRATION_ENGINE
 app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
+app.extensions['forecast_input_service'] = FORECAST_INPUT_SERVICE
 
 LOCATION_TIMEZONE = settings.timezone
 REFERENCE_MONTH, REFERENCE_DAY = settings.chithirai_reference_parts
@@ -116,7 +127,7 @@ app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
 app.extensions['forecast_calendar_service'] = FORECAST_CALENDAR_SERVICE
 app.extensions['observation_inspection_service'] = OBSERVATION_INSPECTION_SERVICE
 
-MIN_UI_YEAR = 2020
+MIN_UI_YEAR = 2015
 MAX_UI_YEAR = 2100
 
 
@@ -277,7 +288,7 @@ def prediction():
         )
         add_ui_notice('காட்சி வகை செல்லாது; நாள் காட்சி காட்டப்படுகிறது.')
         view_mode = 'day'
-    timeline = build_prediction_timeline(year, mode)
+    timeline, forecast_input = build_prediction_context(year, mode)
     forecast_calendar = FORECAST_CALENDAR_SERVICE.build(timeline, view_mode)
     return render_template(
         'prediction.html',
@@ -288,6 +299,7 @@ def prediction():
         calendar_rule=CALENDAR_RULE,
         timeline=timeline,
         forecast_calendar=forecast_calendar,
+        forecast_input=forecast_input,
     )
 
 
@@ -300,6 +312,11 @@ def requested_prediction_mode() -> str:
 
 
 def build_prediction_timeline(year: int, mode: str):
+    timeline, _ = build_prediction_context(year, mode)
+    return timeline
+
+
+def build_prediction_context(year: int, mode: str):
     cycle = build_cycle(year)
     source_window = cycle[f'{mode}_window']
     mapping_basis_end = (
@@ -307,14 +324,14 @@ def build_prediction_timeline(year: int, mode: str):
         if mode == 'aadi'
         else cycle['next_aadi_window'].end_datetime_local
     )
-    return FORECAST_TIMELINE_ENGINE.generate(
+    forecast_input = FORECAST_INPUT_SERVICE.score(source_window)
+    timeline = FORECAST_TIMELINE_ENGINE.generate(
         source_window,
         mapping_basis_end_local=mapping_basis_end,
-        research_score=unavailable_research_score(
-            'observation_data_not_loaded'
-        ),
+        research_score=forecast_input.research_score,
         generated_at=datetime.now(timezone.utc),
     )
+    return timeline, forecast_input
 
 
 @app.route('/prediction.csv')

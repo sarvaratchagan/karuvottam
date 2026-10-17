@@ -71,7 +71,11 @@ class ForecastCalendarEntry:
     @property
     def category_tamil(self) -> str:
         if self.forecast.rain_category is None:
-            return 'தரவு இல்லை'
+            return (
+                'தரவு இல்லை'
+                if self.forecast.status == 'no_data'
+                else 'வெளியிடப்படவில்லை'
+            )
         return CATEGORY_LABELS.get(
             self.forecast.rain_category,
             self.forecast.rain_category,

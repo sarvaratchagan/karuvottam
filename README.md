@@ -5,6 +5,7 @@
 - ஆடி 18 நாள் → மார்கழி கருவோட்டம் முடிந்த மறுநாள் → 180 நாள் பொருத்தம்
 - மார்கழி 11 நாள் (இரவு/பகல் தொடர்ச்சி) → அடுத்த ஆண்டு ஆடி கருவோட்டம் முடிந்த மறுநாள் → 140 நாள் பொருத்தம்
 - 180/140 நாள் முன்னறிவிப்பு அட்டவணை UI
+- சேமிக்கப்பட்ட source-window ERA5 தரவிலிருந்து உருவாகும் experimental research score
 - இடம், அடுத்த சாளரம், சமீபத்திய தரவு/முன்னறிவிப்பு மற்றும் எச்சரிக்கைகளைக் காட்டும் தமிழ் நிலை முகப்புப் பலகை
 - சந்திர நிகழ்வு provenance மற்றும் மார்கழி alternation உடன் தனி கருவோட்டக் காலண்டர்
 - நாள்/வாரம்/மாதம் மற்றும் CSV ஏற்றுமதியுடன் evidence-safe மழை முன்னறிவிப்பு நாட்காட்டி
@@ -13,7 +14,7 @@
 - keyboard, screen-size மற்றும் semantic accessibility checks உடன் தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
-கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. வானிலை client மற்றும் ingestion உள்ளன; முகப்பிலுள்ள முன்னறிவிப்பு மதிப்புகள் இன்னும் விளக்க மதிப்புகள், அளவீடு செய்யப்பட்ட நிகழ்தகவுகள் அல்ல.
+கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. 180/140 நாள் பக்கங்கள் தேர்ந்தெடுக்கப்பட்ட ஆண்டின் ஆடி/மார்கழி source window-க்கான சேமிக்கப்பட்ட `open-meteo:era5` hourly observations-ஐ வாசித்து experimental research score உருவாக்குகின்றன. 2015–2024 source windows உள்ளூர் reference database-ல் முழுமையாக உள்ளன. இந்த score எதிர்கால தினசரி மழை அளவோ அளவீடு செய்யப்பட்ட நிகழ்தகவோ அல்ல; T6.3/T6.4 மதிப்பீடு முடியும் வரை probability, amount மற்றும் rain category வெளியிடப்படாது.
 
 ஆடி 1 = சூன் 21. அதன்பின் முதலில் வரும் பௌர்ணமி அல்லது அமாவாசை நேரமே ஆடி தொடக்கம். மார்கழியில் அமாவாசை/பௌர்ணமி ஆண்டுதோறும் மாறி மாறி பயன்படுத்தப்படும்; இயல்புநிலை anchor `2026 = அமாவாசை`. மார்கழி கண்காணிப்பு 11 முழு நாட்கள்.
 
@@ -80,6 +81,7 @@ python app.py
 | `karuvottam/status_dashboard.py` | முகப்புப் பலகைக்கான location/window/latest-data/forecast நிலை read model |
 | `karuvottam/calendar_view.py` | traceable ஆடி/மார்கழி காலண்டர் read model மற்றும் persistence நிலை |
 | `karuvottam/forecast_calendar.py` | நாள்/வாரம்/மாத forecast read models மற்றும் traceable CSV export |
+| `karuvottam/forecast_inputs.py` | stored source-window weather rows, quality coverage மற்றும் experimental score இணைப்பு |
 | `karuvottam/observation_inspection.py` | stored weather time-series, coverage, interpolation மற்றும் gap read model |
 | `karuvottam/evaluation_dataset.py` | பல ஆண்டு ERA5 collection, source-window/observed-rainfall join மற்றும் reproducible CSV/manifest export |
 | `karuvottam/baseline_comparison.py` | leakage-aware seasonal, Karuvottam-only மற்றும் combined matched baseline predictions |

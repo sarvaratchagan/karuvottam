@@ -193,8 +193,8 @@ def test_key_pages_have_accessible_tamil_document_structure(client, path):
 @pytest.mark.parametrize(
     ('path', 'expected_text'),
     [
-        ('/?year=-1', 'ஆண்டு 2020–2100 வரம்பில் இருக்க வேண்டும்'),
-        ('/calendar?year=999999', 'ஆண்டு 2020–2100 வரம்பில் இருக்க வேண்டும்'),
+        ('/?year=-1', 'ஆண்டு 2015–2100 வரம்பில் இருக்க வேண்டும்'),
+        ('/calendar?year=999999', 'ஆண்டு 2015–2100 வரம்பில் இருக்க வேண்டும்'),
         (
             '/prediction?year=0&mode=unknown&view=unknown',
             'கருவோட்ட வகை செல்லாது; ஆடி தேர்ந்தெடுக்கப்பட்டது',

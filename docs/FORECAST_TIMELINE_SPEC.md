@@ -30,6 +30,28 @@ Every entry contains:
 
 The source-window key provides a readable domain link. Migration `003_prediction_traceability.sql` and `work.forecasts.add_timeline(...)` persist the complete timeline atomically; `prediction_runs.input_window_id` provides the enforced database link to the persisted source window.
 
+## Stored-observation integration
+
+The Flask prediction routes no longer force every timeline into an
+`observation_data_not_loaded` state. `StoredForecastInputService` now:
+
+1. resolves the configured active location and exact provider/model source;
+2. selects UTC hour-end labels assigned to the source window with `(start, end]` semantics;
+3. loads only that location/source from `weather_observations`;
+4. verifies 60-minute precipitation interval metadata and treats incompatible rainfall as missing;
+5. runs the existing window-level quality validator;
+6. passes accepted observations to `research-index-1.0`.
+
+The page displays the provider source, received/expected hour count and coverage. For the
+local 2015–2024 ERA5 reference dataset, all 20 Aadi/Margazhi source windows have complete
+coverage: 432/432 hours for Aadi and 264/264 hours for Margazhi. Missing databases,
+locations, source rows, low coverage or incompatible fields remain explicit `no_data`
+states with stable reason codes.
+
+This integration exposes the source-window research index only. It does not copy observed
+future rainfall into a historical forecast, and it does not publish the T6.2 holdout model
+predictions as operational forecasts.
+
 ## Scientific guardrails
 
 `research-index-1.0` summarizes the complete observation window. It has not been calibrated into future rainfall probability or rainfall amount. Consequently:

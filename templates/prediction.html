@@ -86,7 +86,7 @@
                     </div>
                     <p>{{period.start_date.strftime('%d-%m-%Y')}} → {{period.end_date.strftime('%d-%m-%Y')}}</p>
                     <dl class="period-summary">
-                        <div><dt>மழை வகை</dt><dd>{{period.categories_tamil|join(', ') if period.categories_tamil else 'தரவு இல்லை'}}</dd></div>
+                        <div><dt>மழை வகை</dt><dd>{{period.categories_tamil|join(', ') if period.categories_tamil else ('தரவு இல்லை' if period.no_data_days == period.entries|length else 'வெளியிடப்படவில்லை')}}</dd></div>
                         <div><dt>மழை நிகழ்தகவு</dt><dd>{{period.probability_display or 'வெளியிடப்படவில்லை'}}</dd></div>
                         <div><dt>தர நிலை</dt><dd>{% for quality in period.quality_flags %}{{quality|quality_tamil}}{{', ' if not loop.last else ''}}{% endfor %}</dd></div>
                         <div><dt>கணிப்பு முறை</dt><dd>{{period.methods_tamil|join(', ')}}</dd></div>
@@ -101,6 +101,8 @@
         <h2>முன்னறிவிப்பு தடமறிதல்</h2>
         <dl class="trace-list compact">
             <div><dt>மூலச் சாளரம்</dt><dd>{{timeline.source_window_key}}</dd></div>
+            <div><dt>வானிலைத் தரவு மூலம்</dt><dd>{{forecast_input.source}}</dd></div>
+            <div><dt>பயன்பட்ட மணிகள்</dt><dd>{{forecast_input.received_hours}} / {{forecast_input.expected_hours}} ({{'%g'|format(forecast_input.coverage_pct)}}%)</dd></div>
             <div><dt>காலவரிசை விதி</dt><dd>{{timeline.timeline_model_version}}</dd></div>
             <div><dt>ஆய்வு மதிப்பெண் விதி</dt><dd>{{timeline.score_model_version}}</dd></div>
             <div><dt>மழை வகை விதி</dt><dd>{{timeline.category_threshold_version}}</dd></div>
