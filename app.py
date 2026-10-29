@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
+from functools import wraps
 
 import re
 from uuid import uuid4
 
-from flask import Flask, Response, g, render_template, request
+from flask import Flask, Response, abort, g, make_response, render_template, request
 from werkzeug.exceptions import HTTPException
 
 from config import settings
@@ -21,6 +22,7 @@ from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
+from karuvottam.security import AdminAuthenticator, query_parameters_are_safe
 from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
@@ -44,9 +46,11 @@ configure_application_logging(
     app.logger,
     log_path=settings.log_path,
     level=settings.log_level,
-    secrets=(settings.weather_api_key or '',),
+    secrets=(settings.weather_api_key or '', settings.admin_password or ''),
 )
 app.config.from_mapping(
+    DEBUG=False,
+    MAX_CONTENT_LENGTH=settings.max_request_bytes,
     LOCATION_NAME=settings.location_name,
     LATITUDE=settings.latitude,
     LONGITUDE=settings.longitude,
@@ -60,6 +64,10 @@ app.config.from_mapping(
     WEATHER_MODEL=settings.weather_model,
     WEATHER_API_BASE_URL=settings.weather_api_base_url,
     DATABASE_PATH=str(settings.database_path),
+)
+ADMIN_AUTHENTICATOR = AdminAuthenticator(
+    settings.admin_username,
+    settings.admin_password,
 )
 DATA_ACCESS = DataAccess(settings.database_path)
 WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
@@ -102,6 +110,7 @@ app.extensions['probability_calibration_engine'] = PROBABILITY_CALIBRATION_ENGIN
 app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
 app.extensions['forecast_input_service'] = FORECAST_INPUT_SERVICE
+app.extensions['admin_authenticator'] = ADMIN_AUTHENTICATOR
 
 LOCATION_TIMEZONE = settings.timezone
 REFERENCE_MONTH, REFERENCE_DAY = settings.chithirai_reference_parts
@@ -150,9 +159,27 @@ def assign_request_id() -> None:
     g.request_id = supplied if REQUEST_ID_PATTERN.fullmatch(supplied) else uuid4().hex
 
 
+@app.before_request
+def validate_query_parameters() -> None:
+    if not query_parameters_are_safe(
+        request.query_string,
+        list(request.args.lists()),
+    ):
+        abort(400)
+
+
 @app.after_request
 def include_request_id(response: Response) -> Response:
     response.headers['X-Request-ID'] = getattr(g, 'request_id', uuid4().hex)
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; object-src 'none'; base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'no-referrer'
+    if request.path.startswith('/admin'):
+        response.headers['Cache-Control'] = 'no-store'
     return response
 
 
@@ -170,7 +197,7 @@ def inject_ui_notice():
 
 
 def _render_error(status_code: int, title: str, message: str):
-    return (
+    return make_response(
         render_template(
             'error.html',
             status_code=status_code,
@@ -179,6 +206,43 @@ def _render_error(status_code: int, title: str, message: str):
         ),
         status_code,
     )
+
+
+def require_admin(view):
+    """Protect an administration view without cookie or session state."""
+    @wraps(view)
+    def protected_view(*args, **kwargs):
+        authenticator = app.extensions['admin_authenticator']
+        if not authenticator.enabled:
+            app.logger.warning(
+                'Disabled admin route requested request_id=%s path=%s',
+                g.request_id,
+                request.path,
+            )
+            return _render_error(
+                503,
+                'நிர்வாக அணுகல் அமைக்கப்படவில்லை',
+                'நிர்வாகச் சான்றுகளை சூழல் மாறிகளில் அமைக்கவும்.',
+            )
+        if not authenticator.authenticate(request.headers.get('Authorization')):
+            app.logger.warning(
+                'Admin authentication rejected request_id=%s path=%s',
+                g.request_id,
+                request.path,
+            )
+            response = _render_error(
+                401,
+                'நிர்வாக அங்கீகாரம் தேவை',
+                'செல்லுபடியாகும் நிர்வாகச் சான்றுகளை வழங்கவும்.',
+            )
+            response.headers['WWW-Authenticate'] = (
+                'Basic realm="Karuvottam administration", charset="UTF-8"'
+            )
+            return response
+        g.admin_username = authenticator.username
+        return view(*args, **kwargs)
+
+    return protected_view
 
 
 @app.errorhandler(DataAccessError)
@@ -378,6 +442,20 @@ def index():
         dashboard=dashboard,
     )
 
+
+@app.route('/admin')
+@require_admin
+def admin_dashboard():
+    dashboard = STATUS_DASHBOARD_SERVICE.build()
+    return render_template(
+        'admin.html',
+        dashboard=dashboard,
+        admin_username=g.admin_username,
+        provider_key=WEATHER_PROVIDER_SPEC.key,
+        provider_model=WEATHER_PROVIDER_SPEC.model,
+        api_key_configured=settings.weather_api_key is not None,
+    )
+
 @app.route('/prediction')
 def prediction():
     year = requested_year()
@@ -498,4 +576,9 @@ def observations():
     )
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=settings.port, debug=False)
+    app.run(
+        host='127.0.0.1',
+        port=settings.port,
+        debug=False,
+        use_reloader=False,
+    )

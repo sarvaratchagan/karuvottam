@@ -1,6 +1,6 @@
 """Validated application configuration loaded from environment variables."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from os import environ
 from pathlib import Path
@@ -46,7 +46,7 @@ class Settings:
     weather_provider: str
     weather_model: str
     weather_api_base_url: str
-    weather_api_key: str | None
+    weather_api_key: str | None = field(repr=False)
     weather_timeout_seconds: float
     weather_retry_attempts: int
     weather_retry_backoff_seconds: float
@@ -54,6 +54,9 @@ class Settings:
     database_path: Path
     log_path: Path
     log_level: str
+    admin_username: str | None
+    admin_password: str | None = field(repr=False)
+    max_request_bytes: int
     port: int
 
     @property
@@ -87,6 +90,11 @@ class Settings:
         margazhi_anchor_phase = values.get(
             'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_PHASE', 'new_moon'
         ).strip().lower()
+        admin_username = values.get('KARUVOTTAM_ADMIN_USERNAME', '').strip() or None
+        admin_password = values.get('KARUVOTTAM_ADMIN_PASSWORD') or None
+        max_request_bytes = _parse_int(
+            values, 'KARUVOTTAM_MAX_REQUEST_BYTES', '1048576'
+        )
         timezone_name = values.get('KARUVOTTAM_TIMEZONE', 'Asia/Kolkata')
         reference = values.get('KARUVOTTAM_CHITHIRAI_REFERENCE', '03-21')
         database_path_value = values.get(
@@ -145,6 +153,29 @@ class Settings:
             raise ConfigurationError(
                 'KARUVOTTAM_LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR, or CRITICAL'
             )
+        if (admin_username is None) != (admin_password is None):
+            raise ConfigurationError(
+                'KARUVOTTAM_ADMIN_USERNAME and KARUVOTTAM_ADMIN_PASSWORD '
+                'must be configured together'
+            )
+        if admin_username is not None:
+            if not all(
+                character.isascii()
+                and (character.isalnum() or character in '._-')
+                for character in admin_username
+            ) or not 1 <= len(admin_username) <= 64:
+                raise ConfigurationError(
+                    'KARUVOTTAM_ADMIN_USERNAME must use 1-64 ASCII letters, '
+                    'digits, dots, underscores, or hyphens'
+                )
+            if not 16 <= len(admin_password.encode('utf-8')) <= 256:
+                raise ConfigurationError(
+                    'KARUVOTTAM_ADMIN_PASSWORD must be 16-256 bytes'
+                )
+        if not 1024 <= max_request_bytes <= 10 * 1024 * 1024:
+            raise ConfigurationError(
+                'KARUVOTTAM_MAX_REQUEST_BYTES must be between 1024 and 10485760'
+            )
 
         try:
             ZoneInfo(timezone_name)
@@ -188,6 +219,9 @@ class Settings:
             database_path=database_path.resolve(),
             log_path=log_path.resolve(),
             log_level=log_level,
+            admin_username=admin_username,
+            admin_password=admin_password,
+            max_request_bytes=max_request_bytes,
             port=port,
         )
 

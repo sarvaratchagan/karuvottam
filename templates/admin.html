@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>நிர்வாக நிலை • கருவோட்டம்</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
+    <header>
+        <div>
+            <div class="eyebrow">பாதுகாக்கப்பட்ட நிர்வாகப் பக்கம்</div>
+            <h1>நிர்வாக நிலை</h1>
+            <p>உள்நுழைந்தவர்: {{admin_username}}</p>
+        </div>
+        <a href="/">முகப்புப் பக்கம் →</a>
+    </header>
+    <section class="grid" aria-label="நிர்வாகச் சேவை நிலை">
+        <article class="card">
+            <h2>தரவுத்தளம்</h2>
+            <p>{{'கிடைக்கிறது' if dashboard.database_available else 'கிடைக்கவில்லை'}}</p>
+            <p class="foot">இடப் பதிவு: {{'உள்ளது' if dashboard.location_record else 'இல்லை'}}</p>
+        </article>
+        <article class="card">
+            <h2>வானிலை வழங்குநர்</h2>
+            <p>{{provider_key}} / {{provider_model}}</p>
+            <p class="foot">API key: {{'அமைக்கப்பட்டுள்ளது' if api_key_configured else 'தேவையில்லை / அமைக்கப்படவில்லை'}}</p>
+        </article>
+        <article class="card">
+            <h2>பாதுகாப்பு நிலை</h2>
+            <p>Authentication செயலில் உள்ளது.</p>
+            <p class="foot">ரகசிய மதிப்புகள் இந்தப் பக்கத்தில் காட்டப்படாது.</p>
+        </article>
+    </section>
+    <aside class="warnings" aria-label="நிலை எச்சரிக்கைகள்">
+        <h2>நிலை எச்சரிக்கைகள்</h2>
+        {% if dashboard.warnings %}
+            <ul>{% for warning in dashboard.warnings %}<li>{{warning}}</li>{% endfor %}</ul>
+        {% else %}<p>எச்சரிக்கை இல்லை.</p>{% endif %}
+    </aside>
+</main>
+</body>
+</html>

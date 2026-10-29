@@ -23,7 +23,7 @@ def test_redaction_covers_credentials_urls_and_bearer_headers():
         secrets=('explicit-secret',),
     )
 
-    assert text.count(REDACTED) == 5
+    assert text.count(REDACTED) == 3
     for secret in (
         'url-secret',
         'token-secret',
@@ -32,6 +32,15 @@ def test_redaction_covers_credentials_urls_and_bearer_headers():
         'explicit-secret',
     ):
         assert secret not in text
+
+
+def test_redaction_removes_complete_basic_authorization_value():
+    encoded_credentials = 'YWRtaW46cHJpdmF0ZS1wYXNzd29yZA=='
+
+    text = redact_text(f'Authorization: Basic {encoded_credentials}')
+
+    assert encoded_credentials not in text
+    assert text == f'Authorization: {REDACTED}'
 
 
 def test_formatter_redacts_exception_traceback():

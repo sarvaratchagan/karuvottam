@@ -92,6 +92,7 @@ python app.py
 | `karuvottam/time_series_validation.py` | as-of cutoffs, expanding folds, leakage audits மற்றும் versioned T6.4 reports |
 | `karuvottam/research_findings.py` | checksum-verified evidence, paired bootstrap uncertainty மற்றும் T6.5 claim-safe summary |
 | `karuvottam/error_handling.py` | rotating file logs மற்றும் credential/secret redaction |
+| `karuvottam/security.py` | நிர்வாக Basic authentication மற்றும் bounded query validation |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -103,6 +104,7 @@ python app.py
 - `/prediction?year=2026&mode=margazhi` — மார்கழி அடிப்படையிலான 140 நாள் காட்சி
 - `/prediction.csv?year=2026&mode=aadi` — தினசரி traceability fields உடன் UTF-8 forecast CSV
 - `/observations` — தேதி/source filters உடன் வானிலை நேரத் தொடர் மற்றும் gap ஆய்வு
+- `/admin` — environment credentials தேவைப்படும் பாதுகாக்கப்பட்ட நிர்வாக நிலைப் பக்கம்
 
 உற்பத்தி இயக்கத்தில் Flask development server பயன்படுத்தப்படக்கூடாது. தற்போதைய உள்ளூர் இயக்கம் `debug=False` உடன் மட்டுமே தொடங்குகிறது.
 
@@ -130,6 +132,9 @@ python app.py
 | `KARUVOTTAM_DATABASE_PATH` | `data/karuvottam.sqlite3` — SQLite கோப்பு பாதை |
 | `KARUVOTTAM_LOG_PATH` | `data/logs/karuvottam.log` — 2 MiB rotating diagnostic log |
 | `KARUVOTTAM_LOG_LEVEL` | `INFO` — `DEBUG/INFO/WARNING/ERROR/CRITICAL` |
+| `KARUVOTTAM_ADMIN_USERNAME` | விருப்ப நிர்வாகப் பயனர்; password உடன் மட்டும் அமைக்கவும் |
+| `KARUVOTTAM_ADMIN_PASSWORD` | குறைந்தது 16-byte environment-only ரகசியம்; default இல்லை |
+| `KARUVOTTAM_MAX_REQUEST_BYTES` | `1048576` — அதிகபட்ச request body அளவு |
 | `KARUVOTTAM_PORT` | `5000` |
 
 ## தரவுத்தளத்தை உருவாக்குதல் / புதுப்பித்தல்
@@ -185,3 +190,4 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [T6.4 rolling-origin காலவரிசைச் சரிபார்ப்பு](docs/TIME_SERIES_VALIDATION.md)
 - [T6.5 ஆய்வுக் கண்டறிதல்கள் மற்றும் அறிவியல் வரம்புகள்](docs/RESEARCH_FINDINGS.md)
 - [T7.1 பாதுகாப்பான பிழை கையாளுதல், logs மற்றும் recovery](docs/ERROR_HANDLING.md)
+- [T7.2 நிர்வாக authentication, input controls மற்றும் dependency audit](docs/ADMIN_SECURITY.md)

@@ -31,6 +31,7 @@ from karuvottam.weather_client import (
 from karuvottam.weather_csv import WeatherCsvService
 from karuvottam.weather_provider import OPEN_METEO_ERA5
 from karuvottam.weather_quality import WeatherQualityValidator
+from karuvottam.security import AdminAuthenticator
 
 
 IST = ZoneInfo('Asia/Kolkata')
@@ -78,6 +79,8 @@ def test_app_imports():
         app.extensions['observation_inspection_service'],
         ObservationInspectionService,
     )
+    assert isinstance(app.extensions['admin_authenticator'], AdminAuthenticator)
+    assert app.debug is False
 
 
 def test_home_contains_tamil_status_dashboard(client):

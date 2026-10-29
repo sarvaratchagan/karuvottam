@@ -10,6 +10,9 @@ from typing import Iterable
 
 
 REDACTED = '[REDACTED]'
+_AUTHORIZATION_VALUE = re.compile(
+    r'(?i)(\bauthorization\b\s*(?:=|:)\s*)([^\r\n,;]+)'
+)
 _SENSITIVE_ASSIGNMENT = re.compile(
     r'(?i)(\b(?:api[_-]?key|token|password|secret|authorization)\b)'
     r'(\s*(?:=|:)\s*)([^\s&,;]+)'
@@ -20,6 +23,9 @@ _BEARER_CREDENTIAL = re.compile(r'(?i)(\bBearer\s+)([^\s,;]+)')
 def redact_text(value: object, secrets: Iterable[str] = ()) -> str:
     """Return printable diagnostic text with common credentials removed."""
     text = str(value)
+    text = _AUTHORIZATION_VALUE.sub(
+        lambda match: f'{match.group(1)}{REDACTED}', text
+    )
     text = _SENSITIVE_ASSIGNMENT.sub(
         lambda match: f'{match.group(1)}{match.group(2)}{REDACTED}', text
     )

@@ -556,6 +556,8 @@ karuvottam/
 - உற்பத்தியில் Flask debug mode அணைத்தல்.
 - சார்பு நூலகங்களைப் புதுப்பித்தல்.
 
+**செயலாக்க நிலை:** `/admin` பக்கம் environment-only username/password கொண்ட constant-time HTTP Basic authentication-ன் பின்னால் பாதுகாக்கப்படுகிறது; credentials இல்லையெனில் பாதுகாப்பற்ற default உருவாக்காமல் 503 ஆக மூடப்படுகிறது. நிர்வாகப் பதில்கள் cache செய்யப்படாது; secrets settings repr, Flask config, HTML, URL மற்றும் logs-ல் வெளியிடப்படாது. 1 MiB request-body வரம்பு, 4 KiB query வரம்பு, duplicate/control-character parameter rejection மற்றும் CSP/nosniff/frame/referrer headers சேர்க்கப்பட்டுள்ளன. Flask debug மற்றும் reloader வெளிப்படையாக அணைக்கப்பட்டுள்ளன. `pip check` மற்றும் `pip-audit 2.10.1 --strict` மூலம் 2026-10-29 அன்று resolved runtime dependency set சரிபார்க்கப்பட்டு broken requirements அல்லது அறியப்பட்ட vulnerabilities இல்லை என உறுதி செய்யப்பட்டது; மீண்டும் இயக்கும் நடைமுறை `docs/ADMIN_SECURITY.md`-இல் உள்ளது.
+
 #### T7.3 — காப்புப்பிரதி மற்றும் மீட்பு
 - தரவுத்தளக் காப்புப் பிரதியை திட்டமிட்டு எடுத்தல்.
 - CSV ஏற்றுமதி வழி.
