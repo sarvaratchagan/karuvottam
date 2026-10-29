@@ -10,7 +10,7 @@ import json
 import math
 import os
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from statistics import fmean, pstdev
 from typing import Mapping, Sequence
@@ -268,6 +268,8 @@ class BaselineComparisonEngine:
     def run(
         self,
         examples: Sequence[DatasetExample],
+        *,
+        training_outcome_cutoffs: Mapping[str, date] | None = None,
     ) -> tuple[BaselinePrediction, ...]:
         training = tuple(
             example
@@ -288,14 +290,39 @@ class BaselineComparisonEngine:
             raise ValueError('no complete training outcomes in the requested range')
         if not evaluation:
             raise ValueError('no evaluation rows in the requested range')
-        scale = self._feature_scale(training)
+        default_scale = (
+            None
+            if training_outcome_cutoffs is not None
+            else self._feature_scale(training)
+        )
         predictions: list[BaselinePrediction] = []
         for example in evaluation:
+            available_training = training
+            scale = default_scale
+            if training_outcome_cutoffs is not None:
+                cutoff = training_outcome_cutoffs.get(example.source_window_key)
+                if cutoff is None:
+                    raise ValueError(
+                        'training outcome cutoff is missing for evaluation window '
+                        f'{example.source_window_key}'
+                    )
+                if datetime.fromisoformat(example.target_date_local).date() < cutoff:
+                    raise ValueError(
+                        'evaluation target date precedes its training outcome cutoff'
+                    )
+                available_training = tuple(
+                    candidate
+                    for candidate in training
+                    if datetime.fromisoformat(candidate.target_date_local).date()
+                    < cutoff
+                )
+                scale = self._feature_scale(available_training)
+            assert scale is not None
             predictions.extend(
                 (
-                    self._seasonal(example, training),
-                    self._karuvottam(example, training, scale),
-                    self._combined(example, training, scale),
+                    self._seasonal(example, available_training),
+                    self._karuvottam(example, available_training, scale),
+                    self._combined(example, available_training, scale),
                 )
             )
         return tuple(predictions)

@@ -6,8 +6,8 @@
 
 T6.2, T6.1 evaluation dataset-ன் ஒரே holdout rows-க்கு மூன்று முறைகளின் preliminary
 predictions-ஐ உருவாக்குகிறது. இது performance முடிவை அறிவிப்பதில்லை; precision/recall,
-Brier மற்றும் rainfall-error மதிப்பீடுகள் T6.3 report-ல் உள்ளன. Rolling temporal
-uncertainty மற்றும் validation T6.4-ல் செய்யப்பட வேண்டும்.
+Brier மற்றும் rainfall-error மதிப்பீடுகள் T6.3 report-ல் உள்ளன. Expanding as-of
+rolling validation T6.4 report-ல் உள்ளது.
 
 ## மூன்று அணுகுமுறைகள்
 
@@ -116,5 +116,5 @@ Optional controls:
 - predictions SHA-256: `3f067cd6c5886c33dab40e5c2faf124fd194259f6379f50393de21cd8cd51f28`.
 
 இந்த எண்ணிக்கைகள் coverage/reproducibility நிலை மட்டும். Fixed-holdout முடிவுகள்
-[EVALUATION_METRICS.md](EVALUATION_METRICS.md)-இல் உள்ளன; உறுதியான approach முடிவு
-T6.4 time-series validation முடியும் வரை கூறப்படக்கூடாது.
+[EVALUATION_METRICS.md](EVALUATION_METRICS.md)-இலும் rolling-origin முடிவுகள்
+[TIME_SERIES_VALIDATION.md](TIME_SERIES_VALIDATION.md)-இலும் உள்ளன.

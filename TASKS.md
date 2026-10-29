@@ -65,7 +65,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 | T4.1 | Define and implement deterministic research scoring rules | P2 | T1.5, T2.4 | Done | Unassigned | Inputs, rationale, thresholds, output, and limitations are documented; identical input gives identical output; the score is not presented as probability |
 | T4.2 | Define rain categories | P2 | T4.1 | Done | Unassigned | No-rain, drizzle, moderate, and heavy thresholds specify amount and interval; boundary-value tests pass |
 | T4.3 | Generate 180/140-day experimental forecast timelines | P2 | T1.1, T1.5, T3.2, T4.1, T4.2 | Done | Unassigned | Target timestamps are correct; every output links to its source window, rule/model version, generation time, and quality; missing inputs produce “no data,” not invented values |
-| T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | In Progress | Unassigned | Calibration engine, temporal split, Brier/reliability metrics, and publication gate exist; T6.1/T6.3 evidence is available, but T6.4 rolling validation and the gate remain incomplete, with percentages hidden meanwhile |
+| T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | In Progress | Unassigned | Calibration engine and gate exist; T6.1–T6.4 evidence does not establish incremental value and the score-calibration gate has not passed, so percentages remain hidden |
 
 ## Phase 5 — Deliver the Tamil web interface
 
@@ -84,7 +84,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 | T6.1 | Assemble a reproducible multi-year dataset | P2 | T1.5, T2.4, T3.2 | Done | Unassigned | Historical windows and subsequent observed rainfall are linked; provider, gaps, transformations, and measurement differences are documented |
 | T6.2 | Implement baseline comparisons | P2 | T6.1, T4.3 | Done | Unassigned | Karuvottam-only, seasonal/climatology baseline, and combined-feature approaches run over the same evaluation periods |
 | T6.3 | Implement evaluation metrics and reports | P2 | T6.2 | Done | Unassigned | Appropriate classification, probability, and amount metrics are reported by season, month, and forecast horizon with limitations |
-| T6.4 | Implement time-series validation and versioning | P2 | T6.2, T6.3 | Todo | Unassigned | Past years train/configure rules and later years test them; leakage checks pass; dataset, rule, and model versions make results reproducible |
+| T6.4 | Implement time-series validation and versioning | P2 | T6.2, T6.3 | Done | Unassigned | Past years train/configure rules and later years test them; leakage checks pass; dataset, rule, and model versions make results reproducible |
 | T6.5 | Publish a research findings summary | P2 | T6.4 | Todo | Unassigned | The summary states whether Karuvottam adds value over baseline, includes uncertainty, and avoids unsupported accuracy claims |
 
 ## Phase 7 — Secure, recover, and deploy

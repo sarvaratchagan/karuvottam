@@ -2,7 +2,7 @@ import csv
 import hashlib
 import json
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -182,6 +182,45 @@ def test_only_complete_training_outcomes_are_used():
         for item in predictions
         if item.status == 'available'
     )
+
+
+def test_as_of_cutoff_excludes_training_outcomes_not_yet_observed():
+    early = replace(
+        _example(2018, 2.0), target_date_local='2019-01-01'
+    )
+    future_at_cutoff = replace(
+        _example(2019, 200.0), target_date_local='2020-07-10'
+    )
+    evaluation = replace(
+        _example(2020, 5.0), target_date_local='2020-12-01'
+    )
+    predictions = BaselineComparisonEngine(
+        BaselineComparisonSpec(2018, 2019, 2020, 2020)
+    ).run(
+        (early, future_at_cutoff, evaluation),
+        training_outcome_cutoffs={
+            evaluation.source_window_key: date(2020, 7, 1)
+        },
+    )
+
+    assert all(
+        item.predicted_precipitation_mm == 2.0
+        for item in predictions
+        if item.status == 'available'
+    )
+
+
+def test_as_of_cutoff_is_required_for_every_evaluation_window():
+    examples = (
+        _example(2018, 2.0),
+        _example(2019, 3.0),
+        _example(2020, 5.0),
+    )
+
+    with pytest.raises(ValueError, match='cutoff is missing'):
+        BaselineComparisonEngine(
+            BaselineComparisonSpec(2018, 2019, 2020, 2020)
+        ).run(examples, training_outcome_cutoffs={})
 
 
 def test_reader_rejects_checksum_mismatch(tmp_path):

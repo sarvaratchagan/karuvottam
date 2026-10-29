@@ -112,7 +112,7 @@ Reference evaluation key:
 
 - Target rainfall ERA5 reanalysis; உள்ளூர் rain-gauge அளவீடு அல்ல.
 - Subgroup sample/class counts மாறுபடும்; சிறிய groups நிலையற்றதாக இருக்கலாம்.
-- இது ஒரு fixed holdout மட்டும்; year-by-year rolling-origin uncertainty இல்லை.
+- இது ஒரு fixed holdout report; year-by-year முடிவுகள் தனி T6.4 rolling-origin report-ல் உள்ளன.
 - Hyperparameter sensitivity மற்றும் confidence intervals இன்னும் மதிப்பிடப்படவில்லை.
-- T6.4 time-series validation மற்றும் versioning முடியும் வரை UI probability publication gate
-  மூடப்பட்டே இருக்க வேண்டும்.
+- T6.4 time-series validation முடிந்துள்ளது; அதன் முடிவும் probability publication-ஐ ஆதரிக்கவில்லை.
+  Calibration publication gate தனியாகக் கடக்காததால் UI probability தொடர்ந்து மறைக்கப்படுகிறது.
