@@ -11,10 +11,11 @@
 - நாள்/வாரம்/மாதம் மற்றும் CSV ஏற்றுமதியுடன் evidence-safe மழை முன்னறிவிப்பு நாட்காட்டி
 - raw/interpolated வேறுபாடு மற்றும் gaps உடன் வானிலை time-series ஆய்வுப் பக்கம்
 - ஒரே holdout காலத்தில் seasonal, Karuvottam-only மற்றும் combined baseline predictions
+- classification, reliability மற்றும் rainfall-error metrics உடன் reproducible T6.3 அறிக்கைகள்
 - keyboard, screen-size மற்றும் semantic accessibility checks உடன் தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
-கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. 180/140 நாள் பக்கங்கள் தேர்ந்தெடுக்கப்பட்ட ஆண்டின் ஆடி/மார்கழி source window-க்கான சேமிக்கப்பட்ட `open-meteo:era5` hourly observations-ஐ வாசித்து experimental research score உருவாக்குகின்றன. 2015–2024 source windows உள்ளூர் reference database-ல் முழுமையாக உள்ளன. இந்த score எதிர்கால தினசரி மழை அளவோ அளவீடு செய்யப்பட்ட நிகழ்தகவோ அல்ல; T6.3/T6.4 மதிப்பீடு முடியும் வரை probability, amount மற்றும் rain category வெளியிடப்படாது.
+கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. 180/140 நாள் பக்கங்கள் தேர்ந்தெடுக்கப்பட்ட ஆண்டின் ஆடி/மார்கழி source window-க்கான சேமிக்கப்பட்ட `open-meteo:era5` hourly observations-ஐ வாசித்து experimental research score உருவாக்குகின்றன. 2015–2024 source windows உள்ளூர் reference database-ல் முழுமையாக உள்ளன. T6.3 ஒரு fixed 2022–2024 holdout-க்கு metrics வழங்குகிறது; rolling T6.4 validation மற்றும் calibration gate இன்னும் முடியாததால் இந்த score எதிர்கால தினசரி மழை அளவோ அளவீடு செய்யப்பட்ட நிகழ்தகவோ அல்ல, probability/amount/rain category UI-ல் வெளியிடப்படாது.
 
 ஆடி 1 = சூன் 21. அதன்பின் முதலில் வரும் பௌர்ணமி அல்லது அமாவாசை நேரமே ஆடி தொடக்கம். மார்கழியில் அமாவாசை/பௌர்ணமி ஆண்டுதோறும் மாறி மாறி பயன்படுத்தப்படும்; இயல்புநிலை anchor `2026 = அமாவாசை`. மார்கழி கண்காணிப்பு 11 முழு நாட்கள்.
 
@@ -85,6 +86,7 @@ python app.py
 | `karuvottam/observation_inspection.py` | stored weather time-series, coverage, interpolation மற்றும் gap read model |
 | `karuvottam/evaluation_dataset.py` | பல ஆண்டு ERA5 collection, source-window/observed-rainfall join மற்றும் reproducible CSV/manifest export |
 | `karuvottam/baseline_comparison.py` | leakage-aware seasonal, Karuvottam-only மற்றும் combined matched baseline predictions |
+| `karuvottam/evaluation_metrics.py` | classification, reliability, rainfall-amount மற்றும் grouped T6.3 evaluation reports |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -172,3 +174,4 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்](docs/UI_ACCEPTANCE.md)
 - [பல ஆண்டு reproducible மதிப்பீட்டுத் தரவுத்தொகுப்பு](docs/EVALUATION_DATASET.md)
 - [Seasonal / Karuvottam / combined அடிப்படை மாதிரி ஒப்பீடு](docs/BASELINE_COMPARISON.md)
+- [T6.3 மதிப்பீட்டு அளவீடுகள் மற்றும் reference முடிவுகள்](docs/EVALUATION_METRICS.md)

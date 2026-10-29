@@ -433,7 +433,7 @@ karuvottam/
 
 **முடிவு:** நிகழ்தகவு காட்டப்பட்டால் அதன் அளவுத்திருத்தமும் மதிப்பீட்டுக் காலமும் ஆவணப்படுத்தப்பட்டுள்ளன.
 
-**செயலாக்க நிலை:** `score-bin-calibration-1.0` மூலம் source-window அடிப்படையிலான காலவரிசை train/evaluation பிரிப்பு, Brier score, climatology baseline, reliability bins, ECE மற்றும் evidence publication gate செயல்படுத்தப்பட்டுள்ளன. ஆனால் T6.1/T6.3/T6.4 உண்மையான பல-ஆண்டு தரவை வழங்கி gate-ஐ கடக்கும் வரை இந்தப் பணி “In Progress”; UI-இல் சதவீதம் மறைக்கப்பட்டே இருக்கும். Synthetic unit-test முடிவு அறிவியல் calibration ஆதாரம் அல்ல.
+**செயலாக்க நிலை:** `score-bin-calibration-1.0` மூலம் source-window அடிப்படையிலான காலவரிசை train/evaluation பிரிப்பு, Brier score, climatology baseline, reliability bins, ECE மற்றும் evidence publication gate செயல்படுத்தப்பட்டுள்ளன. T6.1 பல-ஆண்டு தரவும் T6.3 fixed-holdout metrics-மும் இப்போது உள்ளன; ஆனால் T6.4 rolling validation மற்றும் calibration publication gate இன்னும் கடக்கப்படாததால் இந்தப் பணி “In Progress”, UI-இல் சதவீதம் மறைக்கப்பட்டே இருக்கும். Synthetic unit-test முடிவு அறிவியல் calibration ஆதாரம் அல்ல.
 
 ### கட்டம் 5 — நாட்காட்டி மற்றும் தமிழ் இடைமுகம்
 
@@ -508,7 +508,7 @@ karuvottam/
 
 **முடிவு:** கருவோட்டத் தகவல் கூடுதல் மதிப்பு தருகிறதா அளவிடப்படுகிறது.
 
-**செயலாக்க நிலை:** `baseline-comparison-1.0` ஒரே time-ordered holdout row identities மீது மூன்று deterministic prediction streams உருவாக்குகிறது: target season/month training climatology (`seasonal-climatology-1.0`), source-window weather features மற்றும் exact forecast day அடிப்படையிலான Karuvottam-only nearest neighbours (`karuvottam-knn-1.0`), source features உடன் target month/horizon distance சேர்த்த combined nearest neighbours (`combined-knn-1.0`). Training years evaluation years-க்கு முன் இருக்க வேண்டும்; scaling மற்றும் neighbour selection training rows-ல் மட்டுமே நடக்கும்; holdout observed rainfall prediction logic-ல் நுழையாது. 2015–2021 training மற்றும் 2022–2024 evaluation reference run-ல் மூன்று approaches-க்கும் ஒரே 960 rows வீதம், மொத்தம் 2,880 available predictions உருவாக்கப்பட்டன. இந்த output performance முடிவு அல்ல; T6.3 metrics மற்றும் T6.4 validation அவசியம்.
+**செயலாக்க நிலை:** `baseline-comparison-1.0` ஒரே time-ordered holdout row identities மீது மூன்று deterministic prediction streams உருவாக்குகிறது: target season/month training climatology (`seasonal-climatology-1.0`), source-window weather features மற்றும் exact forecast day அடிப்படையிலான Karuvottam-only nearest neighbours (`karuvottam-knn-1.0`), source features உடன் target month/horizon distance சேர்த்த combined nearest neighbours (`combined-knn-1.0`). Training years evaluation years-க்கு முன் இருக்க வேண்டும்; scaling மற்றும் neighbour selection training rows-ல் மட்டுமே நடக்கும்; holdout observed rainfall prediction logic-ல் நுழையாது. 2015–2021 training மற்றும் 2022–2024 evaluation reference run-ல் மூன்று approaches-க்கும் ஒரே 960 rows வீதம், மொத்தம் 2,880 available predictions உருவாக்கப்பட்டன. T6.3 இப்போது இந்த output-ஐ அளவிடுகிறது; உறுதியான performance முடிவுக்கு T6.4 rolling validation இன்னும் அவசியம்.
 
 #### T6.3 — மதிப்பீட்டு அளவீடுகள்
 - மழை உண்டா / இல்லையா: precision, recall, F1, ROC-AUC (பொருத்தமானால்).
@@ -517,6 +517,8 @@ karuvottam/
 - பருவம், மாதம், முன்னறிவிப்பு தூரத்தின்படி முடிவுகளைப் பிரித்தல்.
 
 **முடிவு:** மாதிரிகளின் பலமும் பலவீனமும் அளவிடப்படுகின்றன.
+
+**செயலாக்க நிலை:** `evaluation-metrics-1.0` T6.2 prediction CSV மற்றும் manifest checksum-ஐச் சரிபார்த்து, மூன்று approaches-க்கும் ஒரே holdout identity/outcome/provenance இருப்பதை கட்டாயப்படுத்துகிறது. 50% preliminary wet-frequency cutoff-ல் precision, recall, F1 மற்றும் tie-aware ROC-AUC; 10-bin Brier/reliability/ECE; MAE, RMSE, bias மற்றும் Pearson correlation கணக்கிடப்படுகின்றன. முடிவுகள் overall, ஆடி/மார்கழி season, Gregorian target month மற்றும் 30 நாள் forecast-horizon bands எனப் பிரிக்கப்பட்டு deterministic metrics CSV, reliability CSV, Markdown summary மற்றும் SHA-256 manifest ஆக எழுதப்படுகின்றன. 2015–2021 training / 2022–2024 fixed holdout reference run-ல் 2,880 predictions அனைத்தும் மதிப்பிடப்பட்டன. Combined model F1/recall-ல் முன்னிலை பெற்றாலும், seasonal climatology Brier மற்றும் rainfall-amount errors-ல் சிறந்தது; எனவே Karuvottam கூடுதல் மதிப்பு நிரூபிக்கப்பட்டதாக இன்னும் கூற முடியாது. T6.4 rolling temporal validation அவசியம்; UI probability gate மூடப்பட்டே உள்ளது.
 
 #### T6.4 — கால வரிசைச் சரிபார்ப்பு
 - கடந்த ஆண்டுகளைப் பயிற்சிக்குப் பயன்படுத்தி பின்னர் வந்த ஆண்டுகளில் சோதித்தல்.

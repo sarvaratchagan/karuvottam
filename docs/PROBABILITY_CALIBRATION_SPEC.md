@@ -61,4 +61,4 @@ Failure produces `status=withheld`, explicit reason codes, and `predict_probabil
 
 ## Current limitation
 
-Automated tests use synthetic separable data only to verify calculations, time separation, determinism, boundary behavior, and the publication lock. Synthetic test success is **not calibration evidence**. T6.1 must assemble real multi-year samples, and T6.3/T6.4 must run and version the real held-out evaluation before the current publication state can change.
+Automated tests use synthetic separable data only to verify calculations, time separation, determinism, boundary behavior, and the publication lock. Synthetic test success is **not calibration evidence**. T6.1 multi-year samples and the T6.3 fixed-holdout report now exist, but T6.4 rolling validation and the calibration publication gate must still pass before the current publication state can change.
