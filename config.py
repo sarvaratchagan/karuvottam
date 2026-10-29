@@ -52,6 +52,8 @@ class Settings:
     weather_retry_backoff_seconds: float
     weather_raw_data_dir: Path
     database_path: Path
+    log_path: Path
+    log_level: str
     port: int
 
     @property
@@ -95,6 +97,15 @@ class Settings:
         database_path = Path(database_path_value).expanduser()
         if not database_path.is_absolute():
             database_path = PROJECT_ROOT / database_path
+        log_path_value = values.get(
+            'KARUVOTTAM_LOG_PATH', 'data/logs/karuvottam.log'
+        ).strip()
+        if not log_path_value:
+            raise ConfigurationError('KARUVOTTAM_LOG_PATH must not be blank')
+        log_path = Path(log_path_value).expanduser()
+        if not log_path.is_absolute():
+            log_path = PROJECT_ROOT / log_path
+        log_level = values.get('KARUVOTTAM_LOG_LEVEL', 'INFO').strip().upper()
         raw_data_dir = Path(
             values.get(
                 'KARUVOTTAM_WEATHER_RAW_DATA_DIR', 'data/imports/weather/raw'
@@ -129,6 +140,10 @@ class Settings:
             raise ConfigurationError(
                 'KARUVOTTAM_MARGAZHI_ALTERNATION_ANCHOR_PHASE must be '
                 'new_moon or full_moon'
+            )
+        if log_level not in {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}:
+            raise ConfigurationError(
+                'KARUVOTTAM_LOG_LEVEL must be DEBUG, INFO, WARNING, ERROR, or CRITICAL'
             )
 
         try:
@@ -171,6 +186,8 @@ class Settings:
             weather_retry_backoff_seconds=weather_retry_backoff_seconds,
             weather_raw_data_dir=raw_data_dir.resolve(),
             database_path=database_path.resolve(),
+            log_path=log_path.resolve(),
+            log_level=log_level,
             port=port,
         )
 

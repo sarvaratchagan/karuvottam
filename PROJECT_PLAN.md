@@ -547,6 +547,8 @@ karuvottam/
 - ரகசிய விசைகளைப் பதிவுகளில் எழுதாதிருத்தல்.
 - API / தரவுத்தளத் தோல்விக்கான மீட்பு நடைமுறை.
 
+**செயலாக்க நிலை:** அனைத்து பதில்களுக்கும் சரிபார்க்கப்பட்ட அல்லது உருவாக்கப்பட்ட request ID சேர்க்கப்படுகிறது. 404/405, weather/database 503 மற்றும் எதிர்பாராத 500 நிலைகளுக்கு தொழில்நுட்ப விவரமில்லாத அணுகல்தன்மையுள்ள தமிழ் பிழைப் பக்கம் வழங்கப்படுகிறது. 2 MiB அளவில் சுழலும் ஐந்து காப்புப் பதிவுகளுடன் file logging அமைக்கப்பட்டு, API key/token/password/Authorization/Bearer மதிப்புகள் messages மற்றும் tracebacks இரண்டிலும் மறைக்கப்படுகின்றன. Weather retry diagnostics URL/body/key இல்லாமல் provider, model, status, attempt மற்றும் delay மட்டும் பதிவு செய்கின்றன. API retry/idempotent ingestion மற்றும் database rollback/degraded-read மீட்பு நடைமுறை `docs/ERROR_HANDLING.md`-இல் ஆவணப்படுத்தப்பட்டு automated tests மூலம் சரிபார்க்கப்படுகிறது.
+
 #### T7.2 — பாதுகாப்பு
 - நிர்வாகப் பக்கங்களுக்கு அங்கீகாரம்.
 - உள்ளீட்டு சரிபார்ப்பு.

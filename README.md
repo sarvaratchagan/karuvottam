@@ -91,6 +91,7 @@ python app.py
 | `karuvottam/evaluation_metrics.py` | classification, reliability, rainfall-amount மற்றும் grouped T6.3 evaluation reports |
 | `karuvottam/time_series_validation.py` | as-of cutoffs, expanding folds, leakage audits மற்றும் versioned T6.4 reports |
 | `karuvottam/research_findings.py` | checksum-verified evidence, paired bootstrap uncertainty மற்றும் T6.5 claim-safe summary |
+| `karuvottam/error_handling.py` | rotating file logs மற்றும் credential/secret redaction |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -127,6 +128,8 @@ python app.py
 | `KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS` | exponential retry-ன் ஆரம்ப தாமதம் `1` விநாடி |
 | `KARUVOTTAM_WEATHER_RAW_DATA_DIR` | `data/imports/weather/raw` — exact provider responses |
 | `KARUVOTTAM_DATABASE_PATH` | `data/karuvottam.sqlite3` — SQLite கோப்பு பாதை |
+| `KARUVOTTAM_LOG_PATH` | `data/logs/karuvottam.log` — 2 MiB rotating diagnostic log |
+| `KARUVOTTAM_LOG_LEVEL` | `INFO` — `DEBUG/INFO/WARNING/ERROR/CRITICAL` |
 | `KARUVOTTAM_PORT` | `5000` |
 
 ## தரவுத்தளத்தை உருவாக்குதல் / புதுப்பித்தல்
@@ -181,3 +184,4 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [T6.3 மதிப்பீட்டு அளவீடுகள் மற்றும் reference முடிவுகள்](docs/EVALUATION_METRICS.md)
 - [T6.4 rolling-origin காலவரிசைச் சரிபார்ப்பு](docs/TIME_SERIES_VALIDATION.md)
 - [T6.5 ஆய்வுக் கண்டறிதல்கள் மற்றும் அறிவியல் வரம்புகள்](docs/RESEARCH_FINDINGS.md)
+- [T7.1 பாதுகாப்பான பிழை கையாளுதல், logs மற்றும் recovery](docs/ERROR_HANDLING.md)

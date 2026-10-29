@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import socket
 import ssl
@@ -27,6 +28,7 @@ from karuvottam.weather_quality import WeatherQualityReport, WeatherQualityValid
 
 RETRIABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 MAX_RETRY_DELAY_SECONDS = 60.0
+LOGGER = logging.getLogger(__name__)
 
 
 class WeatherClientError(RuntimeError):
@@ -259,21 +261,50 @@ class OpenMeteoHistoricalClient:
             except WeatherTransportError as exc:
                 last_transport_error = exc
                 if attempt == self.max_attempts:
+                    LOGGER.error(
+                        'Weather transport exhausted provider=%s model=%s attempts=%s',
+                        self.provider.key,
+                        self.provider.model,
+                        attempt,
+                    )
                     raise WeatherTransportError(
                         f'historical weather request failed after {attempt} attempts'
                     ) from exc
-                self.sleep(self._backoff_delay(attempt, None))
+                delay = self._backoff_delay(attempt, None)
+                LOGGER.warning(
+                    'Weather transport retry provider=%s model=%s attempt=%s/%s delay_seconds=%s',
+                    self.provider.key,
+                    self.provider.model,
+                    attempt,
+                    self.max_attempts,
+                    delay,
+                )
+                self.sleep(delay)
                 continue
 
             if response.status_code == 200:
                 break
             if response.status_code not in RETRIABLE_STATUS_CODES:
+                LOGGER.warning(
+                    'Weather provider rejected request provider=%s model=%s status=%s attempt=%s',
+                    self.provider.key,
+                    self.provider.model,
+                    response.status_code,
+                    attempt,
+                )
                 reason = _json_error_reason(response.body)
                 detail = f': {reason}' if reason else ''
                 raise WeatherResponseError(
                     f'provider returned HTTP {response.status_code}{detail}'
                 )
             if attempt == self.max_attempts:
+                LOGGER.error(
+                    'Weather provider retries exhausted provider=%s model=%s status=%s attempts=%s',
+                    self.provider.key,
+                    self.provider.model,
+                    response.status_code,
+                    attempt,
+                )
                 if response.status_code == 429:
                     raise WeatherRateLimitError(
                         f'provider rate limit persisted for {attempt} attempts'
@@ -281,7 +312,17 @@ class OpenMeteoHistoricalClient:
                 raise WeatherTransportError(
                     f'provider returned HTTP {response.status_code} for {attempt} attempts'
                 )
-            self.sleep(self._backoff_delay(attempt, response.headers))
+            delay = self._backoff_delay(attempt, response.headers)
+            LOGGER.warning(
+                'Weather provider retry provider=%s model=%s status=%s attempt=%s/%s delay_seconds=%s',
+                self.provider.key,
+                self.provider.model,
+                response.status_code,
+                attempt,
+                self.max_attempts,
+                delay,
+            )
+            self.sleep(delay)
 
         if response is None:
             raise WeatherTransportError('historical weather request failed') from last_transport_error

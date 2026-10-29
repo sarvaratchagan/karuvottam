@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date, datetime, timezone
 import pytest
 
@@ -126,6 +127,22 @@ def test_rate_and_server_errors_retry_with_retry_after_and_backoff():
     assert len(fetched.hourly['time']) == 2
     assert delays == [2.5, 2]
     assert len(transport.calls) == 3
+
+
+def test_retry_logs_contain_diagnostics_without_api_key(caplog):
+    transport = FakeTransport([_response(503, b'busy'), _response()])
+    logger = logging.getLogger('karuvottam.weather_client')
+    logger.addHandler(caplog.handler)
+
+    try:
+        with caplog.at_level('WARNING', logger='karuvottam.weather_client'):
+            _fetch(_client(transport, api_key='private-weather-key'))
+    finally:
+        logger.removeHandler(caplog.handler)
+
+    assert 'status=503' in caplog.text
+    assert 'attempt=1/3' in caplog.text
+    assert 'private-weather-key' not in caplog.text
 
 
 def test_rate_limit_exhaustion_raises_specific_error():

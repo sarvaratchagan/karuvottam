@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{error_title}} • கருவோட்டம்</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
+    <section class="card" role="alert" aria-labelledby="error-title">
+        <div class="eyebrow">பிழை {{status_code}}</div>
+        <h1 id="error-title">{{error_title}}</h1>
+        <p>{{error_message}}</p>
+        <p class="foot">குறிப்பு எண்: <code>{{request_id}}</code></p>
+        <p><a href="/">முகப்புப் பக்கத்திற்குத் திரும்புக →</a></p>
+    </section>
+</main>
+</body>
+</html>

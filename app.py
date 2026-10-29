@@ -1,11 +1,16 @@
 from datetime import date, datetime, timedelta, timezone
 
+import re
+from uuid import uuid4
+
 from flask import Flask, Response, g, render_template, request
+from werkzeug.exceptions import HTTPException
 
 from config import settings
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.calendar_view import CalendarViewService
-from karuvottam.data_access import DataAccess
+from karuvottam.data_access import DataAccess, DataAccessError
+from karuvottam.error_handling import configure_application_logging
 from karuvottam.forecast_calendar import ForecastCalendarService, VIEW_MODES
 from karuvottam.forecast_inputs import StoredForecastInputService
 from karuvottam.forecast_timeline import (
@@ -21,6 +26,7 @@ from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     RawWeatherPayloadStore,
     WeatherIngestionService,
+    WeatherClientError,
 )
 from karuvottam.weather_csv import WeatherCsvService
 from karuvottam.weather_provider import selected_historical_provider
@@ -34,6 +40,12 @@ WEATHER_PROVIDER_SPEC = selected_historical_provider(
 )
 
 app = Flask(__name__)
+configure_application_logging(
+    app.logger,
+    log_path=settings.log_path,
+    level=settings.log_level,
+    secrets=(settings.weather_api_key or '',),
+)
 app.config.from_mapping(
     LOCATION_NAME=settings.location_name,
     LATITUDE=settings.latitude,
@@ -129,6 +141,19 @@ app.extensions['observation_inspection_service'] = OBSERVATION_INSPECTION_SERVIC
 
 MIN_UI_YEAR = 2015
 MAX_UI_YEAR = 2100
+REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+
+
+@app.before_request
+def assign_request_id() -> None:
+    supplied = request.headers.get('X-Request-ID', '')
+    g.request_id = supplied if REQUEST_ID_PATTERN.fullmatch(supplied) else uuid4().hex
+
+
+@app.after_request
+def include_request_id(response: Response) -> Response:
+    response.headers['X-Request-ID'] = getattr(g, 'request_id', uuid4().hex)
+    return response
 
 
 def add_ui_notice(message: str) -> None:
@@ -138,7 +163,84 @@ def add_ui_notice(message: str) -> None:
 
 @app.context_processor
 def inject_ui_notice():
-    return {'ui_notice': getattr(g, 'ui_notice', None)}
+    return {
+        'ui_notice': getattr(g, 'ui_notice', None),
+        'request_id': getattr(g, 'request_id', None),
+    }
+
+
+def _render_error(status_code: int, title: str, message: str):
+    return (
+        render_template(
+            'error.html',
+            status_code=status_code,
+            error_title=title,
+            error_message=message,
+        ),
+        status_code,
+    )
+
+
+@app.errorhandler(DataAccessError)
+def handle_database_error(error: DataAccessError):
+    app.logger.exception(
+        'Database request failed request_id=%s method=%s path=%s error_type=%s',
+        g.request_id,
+        request.method,
+        request.path,
+        type(error).__name__,
+    )
+    return _render_error(
+        503,
+        'தரவுச் சேவை தற்காலிகமாகக் கிடைக்கவில்லை',
+        'சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
+    )
+
+
+@app.errorhandler(WeatherClientError)
+def handle_weather_error(error: WeatherClientError):
+    app.logger.exception(
+        'Weather provider request failed request_id=%s method=%s path=%s error_type=%s',
+        g.request_id,
+        request.method,
+        request.path,
+        type(error).__name__,
+    )
+    return _render_error(
+        503,
+        'வானிலைச் சேவை தற்காலிகமாகக் கிடைக்கவில்லை',
+        'சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
+    )
+
+
+@app.errorhandler(HTTPException)
+def handle_http_error(error: HTTPException):
+    titles = {
+        404: 'கோரிய பக்கம் கிடைக்கவில்லை',
+        405: 'இந்தச் செயல் அனுமதிக்கப்படவில்லை',
+    }
+    title = titles.get(error.code or 500, 'கோரிக்கையை நிறைவேற்ற முடியவில்லை')
+    return _render_error(
+        error.code or 500,
+        title,
+        'முகப்புப் பக்கத்திற்குத் திரும்பி மீண்டும் முயற்சிக்கவும்.',
+    )
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error: Exception):
+    app.logger.exception(
+        'Unexpected request failure request_id=%s method=%s path=%s error_type=%s',
+        g.request_id,
+        request.method,
+        request.path,
+        type(error).__name__,
+    )
+    return _render_error(
+        500,
+        'எதிர்பாராத பிழை ஏற்பட்டது',
+        'இந்தக் குறிப்பு எண்ணுடன் நிர்வாகியைத் தொடர்புகொள்ளவும்.',
+    )
 
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)

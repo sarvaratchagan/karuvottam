@@ -24,6 +24,8 @@ def test_default_settings_match_project_plan():
     assert settings.weather_retry_backoff_seconds == 1
     assert settings.weather_raw_data_dir == PROJECT_ROOT / 'data/imports/weather/raw'
     assert settings.database_path == PROJECT_ROOT / 'data/karuvottam.sqlite3'
+    assert settings.log_path == PROJECT_ROOT / 'data/logs/karuvottam.log'
+    assert settings.log_level == 'INFO'
     assert settings.port == 5000
 
 
@@ -48,6 +50,8 @@ def test_environment_overrides_are_applied():
             'KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS': '0.25',
             'KARUVOTTAM_WEATHER_RAW_DATA_DIR': 'data/test-weather',
             'KARUVOTTAM_DATABASE_PATH': 'data/test.sqlite3',
+            'KARUVOTTAM_LOG_PATH': 'data/test.log',
+            'KARUVOTTAM_LOG_LEVEL': 'warning',
             'KARUVOTTAM_PORT': '5050',
         }
     )
@@ -70,6 +74,8 @@ def test_environment_overrides_are_applied():
     assert settings.weather_retry_backoff_seconds == 0.25
     assert settings.weather_raw_data_dir == PROJECT_ROOT / 'data/test-weather'
     assert settings.database_path == PROJECT_ROOT / 'data/test.sqlite3'
+    assert settings.log_path == PROJECT_ROOT / 'data/test.log'
+    assert settings.log_level == 'WARNING'
     assert settings.port == 5050
 
 
@@ -83,6 +89,8 @@ def test_environment_overrides_are_applied():
         ('KARUVOTTAM_TIMEZONE', 'Not/A_Zone', 'is not available'),
         ('KARUVOTTAM_CHITHIRAI_REFERENCE', 'March-21', 'must use MM-DD'),
         ('KARUVOTTAM_DATABASE_PATH', '', 'must not be blank'),
+        ('KARUVOTTAM_LOG_PATH', '', 'must not be blank'),
+        ('KARUVOTTAM_LOG_LEVEL', 'verbose', 'must be DEBUG'),
         ('KARUVOTTAM_WEATHER_TIMEOUT_SECONDS', '0', 'greater than zero'),
         ('KARUVOTTAM_WEATHER_RETRY_ATTEMPTS', '0', 'at least 1'),
         ('KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS', '-1', 'must not be negative'),

@@ -124,8 +124,12 @@ def test_main_pages_return_200(client, path, expected_text):
 
 
 def test_invalid_year_falls_back_and_is_logged(client, caplog):
-    with caplog.at_level('WARNING', logger=app.logger.name):
-        response = client.get('/?year=not-a-year')
+    app.logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level('WARNING', logger=app.logger.name):
+            response = client.get('/?year=not-a-year')
+    finally:
+        app.logger.removeHandler(caplog.handler)
 
     assert response.status_code == 200
     assert 'value="2026"' in response.get_data(as_text=True)
