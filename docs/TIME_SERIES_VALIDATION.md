@@ -106,4 +106,4 @@ horizon-band நாட்களை CLI options மூலம் மாற்ற�
   dataset, இடம், காலம் மற்றும் models பற்றிய முடிவு மட்டும்.
 - Rolling validation probability calibration gate-க்கு மாற்றாகாது. Empirical probability
   UI publication தொடர்ந்து disabled.
-- T6.5 இந்த முடிவுகள் மற்றும் uncertainty-ஐ ஆதாரமற்ற accuracy claim இல்லாமல் சுருக்க வேண்டும்.
+- T6.5 paired uncertainty மற்றும் claim-safe முடிவு [RESEARCH_FINDINGS.md](RESEARCH_FINDINGS.md)-இல் வெளியிடப்பட்டுள்ளது.

@@ -85,7 +85,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 | T6.2 | Implement baseline comparisons | P2 | T6.1, T4.3 | Done | Unassigned | Karuvottam-only, seasonal/climatology baseline, and combined-feature approaches run over the same evaluation periods |
 | T6.3 | Implement evaluation metrics and reports | P2 | T6.2 | Done | Unassigned | Appropriate classification, probability, and amount metrics are reported by season, month, and forecast horizon with limitations |
 | T6.4 | Implement time-series validation and versioning | P2 | T6.2, T6.3 | Done | Unassigned | Past years train/configure rules and later years test them; leakage checks pass; dataset, rule, and model versions make results reproducible |
-| T6.5 | Publish a research findings summary | P2 | T6.4 | Todo | Unassigned | The summary states whether Karuvottam adds value over baseline, includes uncertainty, and avoids unsupported accuracy claims |
+| T6.5 | Publish a research findings summary | P2 | T6.4 | Done | Unassigned | The summary states whether Karuvottam adds value over baseline, includes uncertainty, and avoids unsupported accuracy claims |
 
 ## Phase 7 — Secure, recover, and deploy
 

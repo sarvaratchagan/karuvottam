@@ -529,6 +529,16 @@ karuvottam/
 
 **செயலாக்க நிலை:** `rolling-origin-validation-1.0` expanding folds-ல் ஒவ்வொரு evaluation ஆண்டிற்கும் முந்தைய season years மட்டுமே nominal training range-ஆகப் பயன்படுத்துகிறது. அதற்கும் மேலாக, ஒவ்வொரு ஆடி/மார்கழி evaluation source-window தொடக்க உள்ளூர் தேதிக்கு முன் முடிந்த target outcomes மட்டுமே training, feature scaling மற்றும் neighbour selection-ல் சேர்க்கப்படுகின்றன; இன்னும் நிகழாத outcomes தனியாக எண்ணப்பட்டு விலக்கப்படுகின்றன. ஒவ்வொரு fold-க்கும் predictions, overall/season/month/horizon metrics, reliability bins மற்றும் source-window leakage audit உருவாக்கப்படுகின்றன; pooled out-of-fold report, dataset/calendar/timeline/measurement/metric/validation/model versions மற்றும் அனைத்து output SHA-256 values manifest-ல் பதியப்படுகின்றன. 2015-ல் training தொடங்கி 2020–2024 ஐந்து expanding folds கொண்ட reference run 4,800 predictions மற்றும் 10 passed source-window leakage checks உருவாக்கியது. Pooled seasonal climatology F1 `0.733226`, Brier `0.212113`, MAE `3.219839` ஆக இருந்து Karuvottam-only மற்றும் combined models-ஐ மொத்தத்தில் முந்தியது. ஆகவே probability publication gate திறக்கப்படவில்லை.
 
+#### T6.5 — ஆய்வுக் கண்டறிதல் சுருக்கம்
+- T6.3 fixed-holdout மற்றும் T6.4 rolling-origin artifacts-ஐ checksum-உடன் சரிபார்த்தல்.
+- Seasonal baseline-க்கு எதிரான paired source-window uncertainty-ஐ அளவிடுதல்.
+- Karuvottam கூடுதல் மதிப்பு தருகிறதா என்பதை முன் வரையறுக்கப்பட்ட decision rule மூலம் தீர்மானித்தல்.
+- முடிவின் இடம்/தரவு/கால/model வரம்புகள் மற்றும் probability publication நிலையைத் தெளிவாகக் கூறுதல்.
+
+**முடிவு:** ஆதாரமுள்ள முடிவும் அதன் uncertainty/வரம்புகளும் unsupported accuracy claim இல்லாமல் வெளியிடப்படுகின்றன.
+
+**செயலாக்க நிலை:** `research-findings-1.0` T6.3/T6.4 manifests மற்றும் அவற்றின் input file SHA-256 values-ஐச் சரிபார்த்து, seasonal climatology-க்கு எதிராக Karuvottam-only மற்றும் combined predictions-ஐ ஒரே 1,600 rolling identities மீது pair செய்கிறது. பத்து source-window blocks-ஐ 2,000 deterministic bootstrap iterations மூலம் resample செய்து Brier, MAE மற்றும் RMSE deltas-க்கு 95% percentile CI உருவாக்குகிறது. Brier மற்றும் MAE delta CI-களின் மேல் எல்லைகள் இரண்டும் 0-க்கு கீழ் இருந்தால் மட்டுமே incremental value supported என்ற முன் வரையறுக்கப்பட்ட rule பயன்படுத்தப்படுகிறது. Reference run-ல் Karuvottam-only Brier delta `0.063234` (95% CI `0.044215–0.081066`), MAE delta `0.535536 mm` (`0.327810–0.767997`); combined Brier delta `0.033421` (`0.021627–0.045750`), MAE delta `0.419416 mm` (`0.138232–0.725105`). Positive delta baseline-ஐவிட மோசமானது; இரு candidates-க்கும் incremental value ஆதரிக்கப்படவில்லை. இந்த முடிவு குறிப்பிட்ட இடம், ERA5 dataset, 2015–2024 காலம், விதிகள் மற்றும் models-க்கு மட்டும் பொருந்தும்; மரபின் பொதுவான மறுப்பு அல்ல. Probability publication disabled.
+
 ### கட்டம் 7 — பாதுகாப்பு, நம்பகத்தன்மை மற்றும் வெளியீடு
 
 #### T7.1 — பிழை கையாளுதல்
