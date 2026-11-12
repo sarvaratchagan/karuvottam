@@ -59,6 +59,23 @@ score/category version, quality, generation-time, status, research-score, and re
 fields to forecast runs and entries. Probability and predicted-rain fields remain
 nullable and are deliberately null for `daily-timeline-1.0`.
 
+Migration `004_event_provenance.sql` adds normalized-classification provenance and
+source URL fields to weather event bulletins, preserving existing rows with a
+`legacy_unspecified` classification basis. It also indexes identity/history reads.
+
+Migration `005_climate_index_provenance.sql` adds source URL/checksum, retrieval time
+and explicit issue-time basis to DMI/ONI rows, preserving existing values.
+
+Migration `006_multi_location.sql` adds optional per-location calendar profiles,
+location-specific window uniqueness, and a location key on saved forecast runs.
+Legacy windows and runs are assigned to the sole existing location when possible;
+the migration validates all foreign keys before it commits. See
+[multiple locations](MULTI_LOCATION.md) for operator commands.
+
+Migration `007_station_sensors.sql` adds station metadata, checksum-addressed
+import batches, and per-reading links to normalized weather observations. See
+[station and IoT observations](SENSOR_DATA.md) for the input contract.
+
 Weather observations enforce the project identity key:
 
 `location_id + observed_at_utc + source`
@@ -95,8 +112,8 @@ Repositories cover locations, calendar rules, lunar events, Karuvottam windows,
 hourly weather observations, and complete forecast timelines. `work.forecasts`
 persists a run and all of its entries in the surrounding unit-of-work transaction;
 `input_window_id` supplies the required database link to the source window.
-Repositories for validation, auditing, and weather-event analysis are added with
-those feature phases so their domain rules and write semantics remain explicit.
+Audit and weather-event repositories are available through the same transaction;
+their domain rules and write semantics are documented in their feature guides.
 
 ## PostgreSQL path
 

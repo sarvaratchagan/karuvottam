@@ -12,6 +12,7 @@ from typing import Iterator, TypeVar
 
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.database import connect_database
+from karuvottam.event_model import EventAdvisory, EventTrackPoint, utc_timestamp
 from karuvottam.lunar_events import LunarEvent
 from karuvottam.windows import KaruvottamWindow
 
@@ -50,6 +51,15 @@ class LocationRecord:
 
 
 @dataclass(frozen=True)
+class LocationRulesRecord:
+    location_id: int
+    chithirai_reference: str
+    rule_version: str
+    margazhi_anchor_year: int
+    margazhi_anchor_phase: str
+
+
+@dataclass(frozen=True)
 class CalendarRuleRecord:
     id: int
     rule_name: str
@@ -74,6 +84,7 @@ class LunarEventRecord:
 @dataclass(frozen=True)
 class KaruvottamWindowRecord:
     id: int
+    location_id: int | None
     season_type: str
     season_year: int
     start_datetime_local: str
@@ -129,8 +140,35 @@ class WeatherObservationRecord:
 
 
 @dataclass(frozen=True)
+class WeatherStationRecord:
+    id: int
+    location_id: int
+    station_key: str
+    name: str
+    source_kind: str
+    provider: str
+    latitude: float
+    longitude: float
+    timezone: str
+    is_active: bool
+    created_at: str
+
+
+@dataclass(frozen=True)
+class StationReadingRecord:
+    id: int
+    station_id: int
+    observation_id: int
+    batch_id: int
+    observed_at_utc: str
+    recorded_at_utc: str
+    row_sha256: str
+
+
+@dataclass(frozen=True)
 class PredictionRunRecord:
     id: int
+    location_id: int | None
     season_type: str
     season_year: int
     prediction_start: str
@@ -163,6 +201,73 @@ class PredictionRecord:
     research_score: float | None
     quality_flag: str | None
     reason_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AuditRecord:
+    id: int
+    actor: str
+    action: str
+    record_type: str
+    record_id: str | None
+    reason: str
+    created_at: str
+
+
+@dataclass(frozen=True)
+class WeatherEventRecord:
+    id: int
+    event_key: str
+    event_type: str
+    provider_classification: str
+    intensity: str | None
+    source: str
+    source_reference: str | None
+    issued_at: str
+    retrieved_at: str
+    center_latitude: float | None
+    center_longitude: float | None
+    central_pressure_hpa: float | None
+    maximum_wind_kmh: float | None
+    quality_flag: str
+    classification_basis: str
+    classification_rule_version: str | None
+    source_url: str | None
+
+
+@dataclass(frozen=True)
+class EventTrackPointRecord:
+    id: int
+    weather_event_id: int
+    valid_at: str
+    issued_at: str | None
+    latitude: float
+    longitude: float
+    point_type: str
+    source: str
+    movement_distance_km: float | None
+    movement_speed_kmh: float | None
+    movement_direction_deg: float | None
+    target_distance_km: float | None
+    quality_flag: str
+
+
+@dataclass(frozen=True)
+class ClimateIndexRecord:
+    id: int
+    index_type: str
+    index_value: float
+    classification: str | None
+    period_start: str
+    period_end: str
+    issued_at: str
+    provider: str
+    data_version: str
+    quality_flag: str
+    retrieved_at: str | None
+    source_url: str | None
+    source_sha256: str | None
+    issue_time_basis: str
 
 
 def _aware_iso(value: datetime, field_name: str) -> str:
@@ -218,6 +323,7 @@ def _lunar_event_from_row(row: sqlite3.Row) -> LunarEventRecord:
 def _window_from_row(row: sqlite3.Row) -> KaruvottamWindowRecord:
     return KaruvottamWindowRecord(
         id=row['id'],
+        location_id=row['location_id'],
         season_type=row['season_type'],
         season_year=row['season_year'],
         start_datetime_local=row['start_datetime_local'],
@@ -258,6 +364,7 @@ def _weather_observation_from_row(row: sqlite3.Row) -> WeatherObservationRecord:
 def _prediction_run_from_row(row: sqlite3.Row) -> PredictionRunRecord:
     return PredictionRunRecord(
         id=row['id'],
+        location_id=row['location_id'],
         season_type=row['season_type'],
         season_year=row['season_year'],
         prediction_start=row['prediction_start'],
@@ -395,12 +502,66 @@ class LocationRepository:
         ).fetchall()
         return tuple(_location_from_row(row) for row in rows)
 
-    def set_active(self, location_id: int, is_active: bool) -> bool:
+    def get_active(self, location_id: int) -> LocationRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM locations WHERE id = ? AND is_active = 1', (location_id,)
+        ).fetchone()
+        return None if row is None else _location_from_row(row)
+
+    def rules(self, location_id: int) -> LocationRulesRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM location_rules WHERE location_id = ?', (location_id,)
+        ).fetchone()
+        return None if row is None else LocationRulesRecord(**dict(row))
+
+    def set_rules(
+        self, location_id: int, *, chithirai_reference: str,
+        rule_version: str, margazhi_anchor_year: int,
+        margazhi_anchor_phase: str,
+    ) -> LocationRulesRecord:
+        if self.get_active(location_id) is None:
+            raise ValueError('location_id must identify an active location')
+        if not rule_version.strip() or margazhi_anchor_year < 1:
+            raise ValueError('invalid location rule version or anchor year')
+        if margazhi_anchor_phase not in ('new_moon', 'full_moon'):
+            raise ValueError('invalid Margazhi anchor phase')
+        try:
+            month, day = chithirai_reference.split('-', 1)
+            date(2000, int(month), int(day))
+        except (TypeError, ValueError) as exc:
+            raise ValueError('chithirai_reference must use MM-DD') from exc
+        self._connection.execute('''
+            INSERT INTO location_rules (
+                location_id, chithirai_reference, rule_version,
+                margazhi_anchor_year, margazhi_anchor_phase
+            ) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(location_id) DO UPDATE SET
+                chithirai_reference=excluded.chithirai_reference,
+                rule_version=excluded.rule_version,
+                margazhi_anchor_year=excluded.margazhi_anchor_year,
+                margazhi_anchor_phase=excluded.margazhi_anchor_phase
+        ''', (location_id, chithirai_reference, rule_version,
+              margazhi_anchor_year, margazhi_anchor_phase))
+        return self.rules(location_id)
+
+    def set_active(
+        self, location_id: int, is_active: bool, *, actor: str, reason: str
+    ) -> bool:
+        # An unchanged value is not a manual edit and receives no audit entry.
         cursor = self._connection.execute(
-            'UPDATE locations SET is_active = ? WHERE id = ?',
-            (int(is_active), location_id),
+            'UPDATE locations SET is_active = ? WHERE id = ? AND is_active != ?',
+            (int(is_active), location_id, int(is_active)),
         )
-        return cursor.rowcount == 1
+        if cursor.rowcount == 1:
+            AuditRepository(self._connection).add(
+                actor=actor,
+                action='location_activated' if is_active else 'location_deactivated',
+                record_type='location',
+                record_id=str(location_id),
+                reason=reason,
+            )
+            return True
+        return False
 
 
 class CalendarRuleRepository:
@@ -475,6 +636,19 @@ class LunarEventRepository:
         ).fetchone()
         return None if row is None else _lunar_event_from_row(row)
 
+    def find(self, event: LunarEvent) -> LunarEventRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM lunar_events WHERE event_type = ? AND '
+            'event_datetime_utc = ? AND source = ? AND calculation_version = ?',
+            (
+                event.event_type,
+                _utc_iso(event.event_datetime_utc, 'event_datetime_utc'),
+                event.source,
+                event.calculation_version,
+            ),
+        ).fetchone()
+        return None if row is None else _lunar_event_from_row(row)
+
 
 class KaruvottamWindowRepository:
     def __init__(self, connection: sqlite3.Connection) -> None:
@@ -485,15 +659,24 @@ class KaruvottamWindowRepository:
         window: KaruvottamWindow,
         *,
         trigger_event_id: int | None,
+        location_id: int | None = None,
     ) -> KaruvottamWindowRecord:
+        if location_id is None:
+            active = LocationRepository(self._connection).list_active()
+            if len(active) != 1:
+                raise ValueError('location_id is required when multiple locations are active')
+            location_id = active[0].id
+        if LocationRepository(self._connection).get_active(location_id) is None:
+            raise ValueError('location_id must identify an active location')
         cursor = self._connection.execute(
             """
             INSERT INTO karuvottam_windows (
-                season_type, season_year, start_datetime_local, end_datetime_local,
+                location_id, season_type, season_year, start_datetime_local, end_datetime_local,
                 duration_hours, trigger_event_id, rule_version, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                location_id,
                 window.season_type,
                 window.season_year,
                 _aware_iso(window.start_datetime_local, 'start_datetime_local'),
@@ -517,13 +700,21 @@ class KaruvottamWindowRepository:
         season_type: str,
         season_year: int,
         rule_version: str,
+        location_id: int | None = None,
     ) -> KaruvottamWindowRecord | None:
+        if location_id is None:
+            active = LocationRepository(self._connection).list_active()
+            if not active:
+                return None
+            if len(active) != 1:
+                raise ValueError('location_id is required when multiple locations are active')
+            location_id = active[0].id
         row = self._connection.execute(
             """
             SELECT * FROM karuvottam_windows
-            WHERE season_type = ? AND season_year = ? AND rule_version = ?
+            WHERE location_id = ? AND season_type = ? AND season_year = ? AND rule_version = ?
             """,
-            (season_type, season_year, rule_version),
+            (location_id, season_type, season_year, rule_version),
         ).fetchone()
         return None if row is None else _window_from_row(row)
 
@@ -667,6 +858,108 @@ class WeatherObservationRepository:
         return tuple(_weather_observation_from_row(row) for row in rows)
 
 
+class WeatherStationRepository:
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> WeatherStationRecord:
+        return WeatherStationRecord(**{**dict(row), 'is_active': bool(row['is_active'])})
+
+    def register(self, *, location_id: int, station_key: str, name: str,
+                 source_kind: str, provider: str, latitude: float,
+                 longitude: float, timezone_name: str) -> WeatherStationRecord:
+        location = LocationRepository(self._connection).get_active(location_id)
+        if location is None:
+            raise ValueError('station location must be active')
+        if (abs(location.latitude - latitude) > 0.000001
+                or abs(location.longitude - longitude) > 0.000001
+                or location.timezone_name != timezone_name):
+            raise ValueError('station coordinates and timezone must match its location')
+        if source_kind not in ('station', 'iot'):
+            raise ValueError('source_kind must be station or iot')
+        if not station_key or not name.strip() or not provider.strip():
+            raise ValueError('station key, name, and provider are required')
+        cursor = self._connection.execute('''
+            INSERT INTO weather_stations (
+                location_id, station_key, name, source_kind, provider,
+                latitude, longitude, timezone
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(location_id, station_key) DO NOTHING
+        ''', (location_id, station_key, name.strip(), source_kind,
+              provider.strip(), latitude, longitude, timezone_name))
+        row = self._connection.execute(
+            'SELECT * FROM weather_stations WHERE location_id = ? AND station_key = ?',
+            (location_id, station_key),
+        ).fetchone()
+        record = self._from_row(row)
+        if cursor.rowcount == 0 and (
+            record.name != name.strip() or record.source_kind != source_kind
+            or record.provider != provider.strip()
+            or record.latitude != latitude or record.longitude != longitude
+            or record.timezone != timezone_name
+        ):
+            raise DuplicateRecordError('station identity conflicts with stored metadata')
+        return record
+
+    def get(self, station_id: int) -> WeatherStationRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM weather_stations WHERE id = ?', (station_id,),
+        ).fetchone()
+        return self._from_row(row) if row else None
+
+    def list_for_location(self, location_id: int) -> tuple[WeatherStationRecord, ...]:
+        rows = self._connection.execute(
+            'SELECT * FROM weather_stations WHERE location_id = ? ORDER BY name, id',
+            (location_id,),
+        ).fetchall()
+        return tuple(self._from_row(row) for row in rows)
+
+    def find_reading(self, station_id: int, observed_at_utc: datetime
+                     ) -> StationReadingRecord | None:
+        row = self._connection.execute('''
+            SELECT * FROM station_readings
+            WHERE station_id = ? AND observed_at_utc = ?
+        ''', (station_id, _utc_iso(observed_at_utc, 'observed_at_utc'))).fetchone()
+        return StationReadingRecord(**dict(row)) if row else None
+
+    def record_batch(self, *, station_id: int, payload_sha256: str,
+                     raw_payload_reference: str, actor: str,
+                     total_rows: int, accepted_rows: int, rejected_rows: int
+                     ) -> int:
+        self._connection.execute('''
+            INSERT INTO station_import_batches (
+                station_id, payload_sha256, raw_payload_reference, actor,
+                total_rows, accepted_rows, rejected_rows
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(station_id, payload_sha256) DO NOTHING
+        ''', (station_id, payload_sha256, raw_payload_reference, actor,
+              total_rows, accepted_rows, rejected_rows))
+        row = self._connection.execute('''
+            SELECT id, raw_payload_reference FROM station_import_batches
+            WHERE station_id = ? AND payload_sha256 = ?
+        ''', (station_id, payload_sha256)).fetchone()
+        if row['raw_payload_reference'] != raw_payload_reference:
+            raise DuplicateRecordError('station batch checksum conflicts with stored archive')
+        return row['id']
+
+    def add_reading(self, *, station_id: int, observation_id: int,
+                    batch_id: int, observed_at_utc: datetime,
+                    recorded_at_utc: datetime, row_sha256: str) -> StationReadingRecord:
+        cursor = self._connection.execute('''
+            INSERT INTO station_readings (
+                station_id, observation_id, batch_id, observed_at_utc,
+                recorded_at_utc, row_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        ''', (station_id, observation_id, batch_id,
+              _utc_iso(observed_at_utc, 'observed_at_utc'),
+              _utc_iso(recorded_at_utc, 'recorded_at_utc'), row_sha256))
+        row = self._connection.execute(
+            'SELECT * FROM station_readings WHERE id = ?', (cursor.lastrowid,),
+        ).fetchone()
+        return StationReadingRecord(**dict(row))
+
+
 class ForecastRepository:
     """Persist complete timeline runs and their daily outputs atomically."""
 
@@ -678,19 +971,28 @@ class ForecastRepository:
         timeline,
         *,
         input_window_id: int,
+        actor: str = 'system:forecast-generator',
+        reason: str = 'Explicit forecast generation',
     ) -> PredictionRunRecord:
         if input_window_id < 1:
             raise ValueError('input_window_id must be positive')
+        input_window = self._connection.execute(
+            'SELECT location_id FROM karuvottam_windows WHERE id = ?',
+            (input_window_id,),
+        ).fetchone()
+        if input_window is None or input_window['location_id'] is None:
+            raise ValueError('input window must identify a location')
         cursor = self._connection.execute(
             """
             INSERT INTO prediction_runs (
-                season_type, season_year, prediction_start, prediction_end,
+                location_id, season_type, season_year, prediction_start, prediction_end,
                 input_window_id, rule_version, model_version, status,
                 source_window_key, mapping_basis_end_local, score_model_version,
                 category_threshold_version, quality_flag, generated_at, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                input_window['location_id'],
                 timeline.season_type,
                 timeline.season_year,
                 timeline.prediction_start.isoformat(),
@@ -741,6 +1043,13 @@ class ForecastRepository:
                 for entry in timeline.entries
             ),
         )
+        AuditRepository(self._connection).add(
+            actor=actor,
+            action='forecast_generated',
+            record_type='prediction_run',
+            record_id=str(run_id),
+            reason=reason,
+        )
         return _created(self.get_run(run_id))
 
     def get_run(self, run_id: int) -> PredictionRunRecord | None:
@@ -750,14 +1059,16 @@ class ForecastRepository:
         ).fetchone()
         return None if row is None else _prediction_run_from_row(row)
 
-    def latest_run(self) -> PredictionRunRecord | None:
+    def latest_run(self, location_id: int | None = None) -> PredictionRunRecord | None:
         """Return the most recently generated forecast run."""
         row = self._connection.execute(
             """
             SELECT * FROM prediction_runs
+            WHERE (? IS NULL OR location_id = ?)
             ORDER BY COALESCE(generated_at, created_at) DESC, id DESC
             LIMIT 1
-            """
+            """,
+            (location_id, location_id),
         ).fetchone()
         return None if row is None else _prediction_run_from_row(row)
 
@@ -773,6 +1084,329 @@ class ForecastRepository:
         return tuple(_prediction_from_row(row) for row in rows)
 
 
+class WeatherEventRepository:
+    """Keep each source bulletin and its distinct track paths immutable."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def record_advisory(self, advisory: EventAdvisory) -> tuple[WeatherEventRecord, bool]:
+        advisory.validate()
+        values = (
+            advisory.event_key, advisory.event_type,
+            advisory.provider_classification, advisory.intensity,
+            advisory.source, advisory.source_reference,
+            utc_timestamp(advisory.issued_at, 'issued_at'),
+            utc_timestamp(advisory.retrieved_at, 'retrieved_at'),
+            advisory.center_latitude, advisory.center_longitude,
+            advisory.central_pressure_hpa, advisory.maximum_wind_kmh,
+            advisory.quality_flag, advisory.classification_basis,
+            advisory.classification_rule_version, advisory.source_url,
+        )
+        cursor = self._connection.execute(
+            '''INSERT INTO weather_events (
+                event_key, event_type, provider_classification, intensity,
+                source, source_reference, issued_at, retrieved_at,
+                center_latitude, center_longitude, central_pressure_hpa,
+                maximum_wind_kmh, quality_flag, classification_basis,
+                classification_rule_version, source_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(source, event_key, issued_at) DO NOTHING''',
+            values,
+        )
+        if cursor.rowcount == 1:
+            return self.get(cursor.lastrowid), True
+        existing = self.find_issue(
+            advisory.source, advisory.event_key,
+            utc_timestamp(advisory.issued_at, 'issued_at'),
+        )
+        if existing is None:
+            raise DataAccessError('event advisory could not be reloaded')
+        # Keep the first retrieval and CSV subset URL; later fetches may differ.
+        expected = values[:7] + values[8:-1]
+        actual = (
+            existing.event_key, existing.event_type,
+            existing.provider_classification, existing.intensity,
+            existing.source, existing.source_reference, existing.issued_at,
+            existing.center_latitude, existing.center_longitude,
+            existing.central_pressure_hpa, existing.maximum_wind_kmh,
+            existing.quality_flag, existing.classification_basis,
+            existing.classification_rule_version,
+        )
+        if actual != expected:
+            raise DuplicateRecordError('event advisory issue conflicts with stored content')
+        return existing, False
+
+    def get(self, advisory_id: int) -> WeatherEventRecord:
+        row = self._connection.execute(
+            'SELECT * FROM weather_events WHERE id = ?', (advisory_id,)
+        ).fetchone()
+        if row is None:
+            raise DataAccessError('event advisory could not be reloaded')
+        return WeatherEventRecord(**dict(row))
+
+    def find_issue(
+        self, source: str, event_key: str, issued_at: str
+    ) -> WeatherEventRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM weather_events WHERE source = ? AND event_key = ? '
+            'AND issued_at = ?',
+            (source, event_key, issued_at),
+        ).fetchone()
+        return None if row is None else WeatherEventRecord(**dict(row))
+
+    def history(self, source: str, event_key: str) -> tuple[WeatherEventRecord, ...]:
+        rows = self._connection.execute(
+            'SELECT * FROM weather_events WHERE source = ? AND event_key = ? '
+            'ORDER BY issued_at, id',
+            (source, event_key),
+        ).fetchall()
+        return tuple(WeatherEventRecord(**dict(row)) for row in rows)
+
+    def latest_in_year(
+        self, source: str, year: int, *, limit: int = 100
+    ) -> tuple[WeatherEventRecord, ...]:
+        if not 1 <= limit <= 500:
+            raise ValueError('limit must be between 1 and 500')
+        rows = self._connection.execute(
+            '''SELECT e.* FROM weather_events e
+            JOIN (
+                SELECT event_key, MAX(issued_at) AS last_issue
+                FROM weather_events
+                WHERE source = ? AND issued_at >= ? AND issued_at < ?
+                GROUP BY event_key
+            ) latest ON e.event_key = latest.event_key
+                AND e.issued_at = latest.last_issue
+            WHERE e.source = ?
+            ORDER BY e.issued_at DESC, e.id DESC LIMIT ?''',
+            (source, f'{year:04d}-01-01', f'{year + 1:04d}-01-01', source, limit),
+        ).fetchall()
+        return tuple(WeatherEventRecord(**dict(row)) for row in rows)
+
+    def latest_year(self, source: str) -> int | None:
+        row = self._connection.execute(
+            'SELECT MAX(substr(issued_at, 1, 4)) AS year '
+            'FROM weather_events WHERE source = ?', (source,)
+        ).fetchone()
+        return int(row['year']) if row['year'] is not None else None
+
+    def event_keys_in_years(
+        self, source: str, start_year: int, end_year: int,
+    ) -> tuple[str, ...]:
+        """Return event identities by first issue, without page-size truncation."""
+        if end_year < start_year:
+            raise ValueError('end_year must not precede start_year')
+        rows = self._connection.execute(
+            '''SELECT event_key, MIN(issued_at) AS first_issue
+            FROM weather_events WHERE source = ?
+            GROUP BY event_key
+            HAVING first_issue >= ? AND first_issue < ?
+            ORDER BY first_issue, event_key''',
+            (source, f'{start_year:04d}-01-01', f'{end_year + 1:04d}-01-01'),
+        ).fetchall()
+        return tuple(row['event_key'] for row in rows)
+
+    def record_point(
+        self, advisory_id: int, point: EventTrackPoint
+    ) -> tuple[EventTrackPointRecord, bool]:
+        point.validate()
+        advisory = self.get(advisory_id)
+        issued_at = (
+            utc_timestamp(point.issued_at, 'issued_at')
+            if point.issued_at is not None else None
+        )
+        if issued_at is not None and issued_at != advisory.issued_at:
+            raise ValueError('track point issued_at must match its advisory')
+        valid_at = utc_timestamp(point.valid_at, 'valid_at')
+        cursor = self._connection.execute(
+            '''INSERT INTO event_track_points (
+                weather_event_id, valid_at, issued_at, latitude,
+                longitude, point_type, source, quality_flag
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(weather_event_id, point_type, valid_at, source) DO NOTHING''',
+            (
+                advisory_id, valid_at, issued_at, point.latitude,
+                point.longitude, point.point_type, point.source,
+                point.quality_flag,
+            ),
+        )
+        if cursor.rowcount == 1:
+            return self.get_point(cursor.lastrowid), True
+        row = self._connection.execute(
+            'SELECT * FROM event_track_points WHERE weather_event_id = ? '
+            'AND point_type = ? AND valid_at = ? AND source = ?',
+            (advisory_id, point.point_type, valid_at, point.source),
+        ).fetchone()
+        if row is None:
+            raise DataAccessError('event track point could not be reloaded')
+        existing = EventTrackPointRecord(**dict(row))
+        if (
+            existing.issued_at, existing.latitude, existing.longitude,
+            existing.quality_flag,
+        ) != (issued_at, point.latitude, point.longitude, point.quality_flag):
+            raise DuplicateRecordError('event track point conflicts with stored content')
+        return existing, False
+
+    def get_point(self, point_id: int) -> EventTrackPointRecord:
+        row = self._connection.execute(
+            'SELECT * FROM event_track_points WHERE id = ?', (point_id,)
+        ).fetchone()
+        if row is None:
+            raise DataAccessError('event track point could not be reloaded')
+        return EventTrackPointRecord(**dict(row))
+
+    def points(self, advisory_id: int) -> tuple[EventTrackPointRecord, ...]:
+        rows = self._connection.execute(
+            'SELECT * FROM event_track_points WHERE weather_event_id = ? '
+            'ORDER BY point_type, valid_at, id', (advisory_id,)
+        ).fetchall()
+        return tuple(EventTrackPointRecord(**dict(row)) for row in rows)
+
+
+class ClimateIndexRepository:
+    """Append-only monthly and three-month climate-index revisions."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def has_digest(self, index_type: str, digest: str) -> bool:
+        return self._connection.execute(
+            'SELECT 1 FROM climate_indices WHERE index_type = ? '
+            'AND source_sha256 = ? LIMIT 1', (index_type, digest),
+        ).fetchone() is not None
+
+    def record(
+        self, *, index_type: str, index_value: float,
+        classification: str | None, period_start: date, period_end: date,
+        issued_at: datetime, retrieved_at: datetime,
+        provider: str, data_version: str, quality_flag: str,
+        source_url: str, source_sha256: str, issue_time_basis: str,
+    ) -> tuple[ClimateIndexRecord, bool]:
+        import math
+
+        if index_type not in ('iod_dmi', 'enso_oni'):
+            raise ValueError('unsupported climate index type')
+        if not math.isfinite(index_value) or period_end < period_start:
+            raise ValueError('invalid climate index value or period')
+        for name, value in (
+            ('provider', provider), ('data_version', data_version),
+            ('quality_flag', quality_flag), ('source_url', source_url),
+            ('source_sha256', source_sha256), ('issue_time_basis', issue_time_basis),
+        ):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f'{name} is required')
+        issued = _utc_iso(issued_at, 'issued_at')
+        retrieved = _utc_iso(retrieved_at, 'retrieved_at')
+        values = (
+            index_type, index_value, classification,
+            period_start.isoformat(), period_end.isoformat(), issued,
+            provider, data_version, quality_flag, retrieved,
+            source_url, source_sha256, issue_time_basis,
+        )
+        cursor = self._connection.execute(
+            '''INSERT INTO climate_indices (
+                index_type, index_value, classification, period_start,
+                period_end, issued_at, provider, data_version, quality_flag,
+                retrieved_at, source_url, source_sha256, issue_time_basis
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(index_type, period_start, period_end, provider, issued_at)
+            DO NOTHING''', values,
+        )
+        if cursor.rowcount == 1:
+            return self.get(cursor.lastrowid), True
+        row = self._connection.execute(
+            'SELECT * FROM climate_indices WHERE index_type = ? AND '
+            'period_start = ? AND period_end = ? AND provider = ? AND issued_at = ?',
+            (index_type, values[3], values[4], provider, issued),
+        ).fetchone()
+        if row is None:
+            raise DataAccessError('climate index could not be reloaded')
+        existing = ClimateIndexRecord(**dict(row))
+        if (
+            existing.index_value, existing.classification, existing.data_version,
+            existing.quality_flag, existing.source_url, existing.source_sha256,
+            existing.issue_time_basis,
+        ) != (
+            index_value, classification, data_version, quality_flag,
+            source_url, source_sha256, issue_time_basis,
+        ):
+            raise DuplicateRecordError('climate index revision conflicts with stored content')
+        return existing, False
+
+    def get(self, record_id: int) -> ClimateIndexRecord:
+        row = self._connection.execute(
+            'SELECT * FROM climate_indices WHERE id = ?', (record_id,)
+        ).fetchone()
+        if row is None:
+            raise DataAccessError('climate index could not be reloaded')
+        return ClimateIndexRecord(**dict(row))
+
+    def latest(self, index_type: str) -> ClimateIndexRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM climate_indices WHERE index_type = ? '
+            'ORDER BY period_end DESC, issued_at DESC, id DESC LIMIT 1',
+            (index_type,),
+        ).fetchone()
+        return None if row is None else ClimateIndexRecord(**dict(row))
+
+    def recent(self, index_type: str, *, limit: int = 24) -> tuple[ClimateIndexRecord, ...]:
+        if not 1 <= limit <= 100:
+            raise ValueError('limit must be between 1 and 100')
+        rows = self._connection.execute(
+            'SELECT * FROM climate_indices WHERE index_type = ? '
+            'ORDER BY period_end DESC, issued_at DESC, id DESC LIMIT ?',
+            (index_type, limit),
+        ).fetchall()
+        return tuple(ClimateIndexRecord(**dict(row)) for row in rows)
+
+
+class AuditRepository:
+    """Append-only, bounded audit events stored with the affected transaction."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def add(
+        self, *, actor: str, action: str, record_type: str,
+        record_id: str | None, reason: str,
+    ) -> AuditRecord:
+        for name, value, maximum in (
+            ('actor', actor, 128), ('action', action, 64),
+            ('record_type', record_type, 64), ('reason', reason, 500),
+        ):
+            if not isinstance(value, str) or not value.strip() or len(value) > maximum:
+                raise ValueError(f'{name} must be nonblank and at most {maximum} characters')
+            if any(character in value for character in '\r\n\x00'):
+                raise ValueError(f'{name} must not contain control characters')
+        if record_id is not None and (
+            not isinstance(record_id, str) or not record_id.strip()
+            or len(record_id) > 128
+        ):
+            raise ValueError('record_id must be nonblank and at most 128 characters')
+        cursor = self._connection.execute(
+            'INSERT INTO audit_logs (actor, action, record_type, record_id, reason) '
+            'VALUES (?, ?, ?, ?, ?)',
+            (actor.strip(), action.strip(), record_type.strip(), record_id, reason.strip()),
+        )
+        return self.get(cursor.lastrowid)
+
+    def get(self, audit_id: int) -> AuditRecord:
+        row = self._connection.execute(
+            'SELECT * FROM audit_logs WHERE id = ?', (audit_id,)
+        ).fetchone()
+        if row is None:
+            raise DataAccessError('audit entry could not be reloaded')
+        return AuditRecord(**dict(row))
+
+    def list_recent(self, *, limit: int = 100) -> tuple[AuditRecord, ...]:
+        if not 1 <= limit <= 500:
+            raise ValueError('limit must be between 1 and 500')
+        rows = self._connection.execute(
+            'SELECT * FROM audit_logs ORDER BY id DESC LIMIT ?', (limit,)
+        ).fetchall()
+        return tuple(AuditRecord(**dict(row)) for row in rows)
+
+
 class UnitOfWork:
     """Repositories sharing one SQLite transaction."""
 
@@ -782,7 +1416,11 @@ class UnitOfWork:
         self.lunar_events = LunarEventRepository(connection)
         self.karuvottam_windows = KaruvottamWindowRepository(connection)
         self.weather_observations = WeatherObservationRepository(connection)
+        self.weather_stations = WeatherStationRepository(connection)
         self.forecasts = ForecastRepository(connection)
+        self.weather_events = WeatherEventRepository(connection)
+        self.climate_indices = ClimateIndexRepository(connection)
+        self.audit = AuditRepository(connection)
 
 
 def _translate_integrity_error(error: sqlite3.IntegrityError) -> DataAccessError:

@@ -9,7 +9,7 @@
 <body>
 <a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
 <main class="wrap forecast-page" id="main-content" tabindex="-1">
-    <a class="back" href="/?year={{year}}">← முதற்பக்கம்</a>
+    <a class="back" href="/?year={{year}}{{selected_location.query}}">← முதற்பக்கம்</a>
     <header class="forecast-header">
         <div>
             <div class="eyebrow">ஆதார நிலை தெளிவாகக் காட்டப்படுகிறது</div>
@@ -17,7 +17,7 @@
             <p>{{timeline.prediction_start.strftime('%d-%m-%Y')}} முதல்
                 {{timeline.prediction_end.strftime('%d-%m-%Y')}} வரை · உள்ளூர் தேதிகள்</p>
         </div>
-        <a class="button-link" href="/prediction.csv?year={{year}}&mode={{mode}}">CSV பதிவிறக்கம்</a>
+        <a class="button-link" href="/prediction.csv?year={{year}}&mode={{mode}}{{selected_location.query}}">CSV பதிவிறக்கம்</a>
     </header>
 
     {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
@@ -26,21 +26,22 @@
         <div class="tab-group" aria-label="கருவோட்ட மூலம்">
             <a class="tab {{'active' if mode == 'aadi' else ''}}"
                {% if mode == 'aadi' %}aria-current="page"{% endif %}
-               href="/prediction?year={{year}}&mode=aadi&view={{forecast_calendar.mode}}">ஆடி · 180 நாள்</a>
+               href="/prediction?year={{year}}&mode=aadi&view={{forecast_calendar.mode}}{{selected_location.query}}">ஆடி · 180 நாள்</a>
             <a class="tab {{'active' if mode == 'margazhi' else ''}}"
                {% if mode == 'margazhi' %}aria-current="page"{% endif %}
-               href="/prediction?year={{year}}&mode=margazhi&view={{forecast_calendar.mode}}">மார்கழி · 140 நாள்</a>
+               href="/prediction?year={{year}}&mode=margazhi&view={{forecast_calendar.mode}}{{selected_location.query}}">மார்கழி · 140 நாள்</a>
         </div>
         <div class="tab-group" aria-label="காலண்டர் அளவு">
             {% for view_key, view_label in [('day', 'நாள்'), ('week', 'வாரம்'), ('month', 'மாதம்')] %}
                 <a class="tab {{'active' if forecast_calendar.mode == view_key else ''}}"
                    {% if forecast_calendar.mode == view_key %}aria-current="page"{% endif %}
-                   href="/prediction?year={{year}}&mode={{mode}}&view={{view_key}}">{{view_label}}</a>
+                   href="/prediction?year={{year}}&mode={{mode}}&view={{view_key}}{{selected_location.query}}">{{view_label}}</a>
             {% endfor %}
         </div>
     </nav>
 
     <section class="forecast-guardrail" role="status">
+        <p>{{selected_location.name}}</p>
         <div>
             <b>{{'தரவு இல்லை' if timeline.status == 'no_data' else 'ஆராய்ச்சி நிலை'}}</b>
             <p>அளவுத்திருத்த ஆதாரம் போதாததால் நிகழ்தகவு வெளியிடப்படவில்லை. மழை அளவு மாதிரி இல்லாததால்

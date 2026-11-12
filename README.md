@@ -93,6 +93,12 @@ python app.py
 | `karuvottam/research_findings.py` | checksum-verified evidence, paired bootstrap uncertainty மற்றும் T6.5 claim-safe summary |
 | `karuvottam/error_handling.py` | rotating file logs மற்றும் credential/secret redaction |
 | `karuvottam/security.py` | நிர்வாக Basic authentication மற்றும் bounded query validation |
+| `karuvottam/backup.py` | SQLite snapshot, checksum verification, restore மற்றும் weather CSV recovery கட்டளைகள் |
+| `karuvottam/health.py` / `wsgi.py` | production readiness சோதனை மற்றும் Gunicorn WSGI entry point |
+| `karuvottam/audit.py` | operator மாற்றங்கள், forecast-run சேமிப்பு மற்றும் audit history CLI |
+| `karuvottam/event_model.py` | வானிலை நிகழ்வு அறிவிப்பு மற்றும் பாதைப் புள்ளி உள்ளீட்டு ஒப்பந்தம் |
+| `karuvottam/event_ingestion.py` / `karuvottam/event_tracks.py` | NOAA IBTrACS இறக்குமதி, நிகழ்வு நகர்வு மற்றும் பாதை வரைபட read model |
+| `karuvottam/climate_indices.py` / `karuvottam/climate_context.py` | NOAA DMI/ONI சேகரிப்பு மற்றும் பருவநிலைப் பின்னணி |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
@@ -105,6 +111,10 @@ python app.py
 - `/prediction.csv?year=2026&mode=aadi` — தினசரி traceability fields உடன் UTF-8 forecast CSV
 - `/observations` — தேதி/source filters உடன் வானிலை நேரத் தொடர் மற்றும் gap ஆய்வு
 - `/admin` — environment credentials தேவைப்படும் பாதுகாக்கப்பட்ட நிர்வாக நிலைப் பக்கம்
+- `/health/live` — WSGI உயிர்நிலைச் சோதனை
+- `/health/ready` — SQLite migration readiness சோதனை
+- `/events?year=2026` — வானிலை நிகழ்வு வரலாறு மற்றும் மூன்று தனித்தனி பாதை வகைகள்
+- `/climate` — IOD/DMI மற்றும் ENSO/ONI பருவநிலைப் பின்னணி
 
 உற்பத்தி இயக்கத்தில் Flask development server பயன்படுத்தப்படக்கூடாது. தற்போதைய உள்ளூர் இயக்கம் `debug=False` உடன் மட்டுமே தொடங்குகிறது.
 
@@ -132,6 +142,7 @@ python app.py
 | `KARUVOTTAM_DATABASE_PATH` | `data/karuvottam.sqlite3` — SQLite கோப்பு பாதை |
 | `KARUVOTTAM_LOG_PATH` | `data/logs/karuvottam.log` — 2 MiB rotating diagnostic log |
 | `KARUVOTTAM_LOG_LEVEL` | `INFO` — `DEBUG/INFO/WARNING/ERROR/CRITICAL` |
+| `KARUVOTTAM_SOURCE_MONITOR_STATE` | `data/monitor/source_status.json` — மூலப் பெறுதல்/பழமை நிலை |
 | `KARUVOTTAM_ADMIN_USERNAME` | விருப்ப நிர்வாகப் பயனர்; password உடன் மட்டும் அமைக்கவும் |
 | `KARUVOTTAM_ADMIN_PASSWORD` | குறைந்தது 16-byte environment-only ரகசியம்; default இல்லை |
 | `KARUVOTTAM_MAX_REQUEST_BYTES` | `1048576` — அதிகபட்ச request body அளவு |
@@ -191,3 +202,16 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [T6.5 ஆய்வுக் கண்டறிதல்கள் மற்றும் அறிவியல் வரம்புகள்](docs/RESEARCH_FINDINGS.md)
 - [T7.1 பாதுகாப்பான பிழை கையாளுதல், logs மற்றும் recovery](docs/ERROR_HANDLING.md)
 - [T7.2 நிர்வாக authentication, input controls மற்றும் dependency audit](docs/ADMIN_SECURITY.md)
+- [T7.3 தினசரி காப்புப்பிரதி மற்றும் தரவு மீட்பு](docs/BACKUP_RECOVERY.md)
+- [T7.4 Gunicorn, HTTPS, monitoring மற்றும் வெளியீட்டுச் சரிபார்ப்பு](docs/PRODUCTION_DEPLOYMENT.md)
+- [T7.5 கையேடு மாற்றங்கள் மற்றும் forecast run தணிக்கை வரலாறு](docs/AUDIT_HISTORY.md)
+- [T8.1 பொதுவான வானிலை நிகழ்வு தரவு மாதிரி](docs/WEATHER_EVENT_MODEL.md)
+- [T8.2 IBTrACS இறக்குமதி, நகர்வு மற்றும் நிகழ்வுப் பாதை வரைபடம்](docs/EVENT_TRACKING.md)
+- [T8.3 DMI மற்றும் ONI பருவநிலைப் பின்னணி](docs/CLIMATE_INDICES.md)
+- [T8.4 இலக்குப் பகுதி தாக்க ஆதார நிலை](docs/EVENT_IMPACT.md)
+- [T8.5 வரலாற்று நிகழ்வு மற்றும் மழை ஆய்வு](docs/EVENT_RAINFALL.md)
+- [T8.6 ஒருங்கிணைந்த நிகழ்வு ஆதார முகப்பு](docs/EVENT_DASHBOARD.md)
+- [T8.7 மூலப் பெறுதல் கண்காணிப்பு மற்றும் தோல்வி எச்சரிக்கை](docs/SOURCE_MONITORING.md)
+- [T8.8 இணைந்த மாதிரி வரலாற்றுச் சரிபார்ப்பு மற்றும் வெளியீட்டு முடிவு](docs/COMBINED_VALIDATION.md)
+- [T9.1 பல இடங்களுக்கான விதிகள், தரவு, கணிப்பு மற்றும் UI](docs/MULTI_LOCATION.md)
+- [T9.2 நிலையம் மற்றும் IoT உணர்கருவி மணிநேரத் தரவு](docs/SENSOR_DATA.md)

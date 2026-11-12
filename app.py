@@ -1,22 +1,32 @@
 from datetime import date, datetime, timedelta, timezone
+from dataclasses import dataclass
 from functools import wraps
+from os import environ
+from pathlib import Path
 
 import re
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
-from flask import Flask, Response, abort, g, make_response, render_template, request
+from flask import Flask, Response, abort, g, has_request_context, make_response, render_template, request
 from werkzeug.exceptions import HTTPException
 
-from config import settings
+from config import PROJECT_ROOT, settings
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.calendar_view import CalendarViewService
-from karuvottam.data_access import DataAccess, DataAccessError
+from karuvottam.climate_context import ClimateContextService
+from karuvottam.data_access import DataAccess, DataAccessError, LocationRecord, LocationRulesRecord
 from karuvottam.error_handling import configure_application_logging
+from karuvottam.event_tracks import EventTrackService
+from karuvottam.event_impact import EventImpactService
+from karuvottam.event_dashboard import EventDashboardEvidenceService
+from karuvottam.event_monitor import DEFAULT_STATE, MonitorStore
 from karuvottam.forecast_calendar import ForecastCalendarService, VIEW_MODES
 from karuvottam.forecast_inputs import StoredForecastInputService
 from karuvottam.forecast_timeline import (
     ForecastTimelineEngine,
 )
+from karuvottam.health import database_is_ready
 from karuvottam.lunar_events import LunarEventEngine
 from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
@@ -143,14 +153,146 @@ OBSERVATION_INSPECTION_SERVICE = ObservationInspectionService(
     longitude=settings.longitude,
     timezone_name=settings.timezone_name,
 )
+EVENT_TRACK_SERVICE = EventTrackService(
+    DATA_ACCESS,
+    target_latitude=settings.latitude,
+    target_longitude=settings.longitude,
+)
+EVENT_IMPACT_SERVICE = EventImpactService(
+    DATA_ACCESS,
+    location_name=settings.location_name,
+    target_latitude=settings.latitude,
+    target_longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+)
+CLIMATE_CONTEXT_SERVICE = ClimateContextService(DATA_ACCESS)
+EVENT_DASHBOARD_EVIDENCE_SERVICE = EventDashboardEvidenceService(
+    Path(environ.get('KARUVOTTAM_RESEARCH_FINDINGS_DIR',
+                     PROJECT_ROOT / 'data/exports/research-findings-2015-2024')),
+    Path(environ.get('KARUVOTTAM_ROLLING_VALIDATION_DIR',
+                     PROJECT_ROOT / 'data/exports/rolling-validation-2015-2024')),
+    Path(environ.get('KARUVOTTAM_EVALUATION_DATASET_DIR',
+                     PROJECT_ROOT / 'data/exports/evaluation-2015-2024')),
+    Path(environ.get('KARUVOTTAM_EVENT_RAINFALL_DIR',
+                     PROJECT_ROOT / 'data/exports/event-rainfall-2015-2024')),
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    combined_validation_dir=Path(environ.get(
+        'KARUVOTTAM_COMBINED_VALIDATION_DIR',
+        PROJECT_ROOT / 'data/exports/combined-validation-2015-2024',
+    )),
+    calibration_dir=Path(environ.get(
+        'KARUVOTTAM_SCORE_CALIBRATION_DIR',
+        PROJECT_ROOT / 'data/exports/score-calibration-2015-2024',
+    )),
+)
+SOURCE_MONITOR_STORE = MonitorStore(Path(environ.get(
+    'KARUVOTTAM_SOURCE_MONITOR_STATE', DEFAULT_STATE,
+)))
 app.extensions['status_dashboard_service'] = STATUS_DASHBOARD_SERVICE
 app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
 app.extensions['forecast_calendar_service'] = FORECAST_CALENDAR_SERVICE
 app.extensions['observation_inspection_service'] = OBSERVATION_INSPECTION_SERVICE
+app.extensions['event_track_service'] = EVENT_TRACK_SERVICE
+app.extensions['event_impact_service'] = EVENT_IMPACT_SERVICE
+app.extensions['climate_context_service'] = CLIMATE_CONTEXT_SERVICE
+app.extensions['event_dashboard_evidence_service'] = EVENT_DASHBOARD_EVIDENCE_SERVICE
+app.extensions['source_monitor_store'] = SOURCE_MONITOR_STORE
 
 MIN_UI_YEAR = 2015
 MAX_UI_YEAR = 2100
 REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+
+
+@dataclass(frozen=True)
+class LocationProfile:
+    location: LocationRecord | None
+    name: str
+    latitude: float
+    longitude: float
+    timezone_name: str
+    calendar_rule: CalendarRule
+    window_engine: KaruvottamWindowEngine
+
+    @property
+    def query(self) -> str:
+        return f'&location={self.location.id}' if self.location else ''
+
+
+def is_default_profile(profile: LocationProfile) -> bool:
+    return (profile.name == settings.location_name
+            and abs(profile.latitude - settings.latitude) < 0.000001
+            and abs(profile.longitude - settings.longitude) < 0.000001
+            and profile.timezone_name == settings.timezone_name
+            and profile.calendar_rule.version == settings.calendar_rule_version
+            and profile.calendar_rule.reference_label == CALENDAR_RULE.reference_label
+            and profile.window_engine.margazhi_anchor_year
+            == settings.margazhi_alternation_anchor_year
+            and profile.window_engine.margazhi_anchor_phase
+            == settings.margazhi_alternation_anchor_phase)
+
+
+def profile_from_location(
+    selected: LocationRecord | None,
+    rules: LocationRulesRecord | None = None,
+) -> LocationProfile:
+    if selected is None:
+        name, latitude, longitude, zone = (
+            settings.location_name, settings.latitude, settings.longitude,
+            settings.timezone_name,
+        )
+    else:
+        name, latitude, longitude, zone = (
+            selected.name, selected.latitude, selected.longitude,
+            selected.timezone_name,
+        )
+    reference = rules.chithirai_reference if rules else settings.chithirai_reference
+    month, day = (int(part) for part in reference.split('-', 1))
+    rule = CalendarRule(
+        reference_month=month, reference_day=day,
+        version=rules.rule_version if rules else settings.calendar_rule_version,
+    )
+    engine = KaruvottamWindowEngine(
+        rule, LunarEventEngine(ZoneInfo(zone)),
+        margazhi_anchor_year=(rules.margazhi_anchor_year if rules else
+                              settings.margazhi_alternation_anchor_year),
+        margazhi_anchor_phase=(rules.margazhi_anchor_phase if rules else
+                               settings.margazhi_alternation_anchor_phase),
+    )
+    return LocationProfile(selected, name, latitude, longitude, zone, rule, engine)
+
+
+def selected_location_profile() -> LocationProfile:
+    cached = getattr(g, 'location_profile', None)
+    if cached is not None:
+        return cached
+    locations: tuple[LocationRecord, ...] = ()
+    rules = None
+    selected = None
+    try:
+        with app.extensions['data_access'].transaction() as work:
+            locations = work.locations.list_active()
+            raw_id = request.args.get('location', '')
+            if raw_id:
+                selected = next(
+                    (item for item in locations if str(item.id) == raw_id), None
+                )
+                if selected is None:
+                    add_ui_notice('இடம் செல்லாது; இயல்புநிலை இடம் காட்டப்படுகிறது.')
+            if selected is None:
+                selected = next((item for item in locations
+                                 if item.name == settings.location_name
+                                 and abs(item.latitude - settings.latitude) < 0.000001
+                                 and abs(item.longitude - settings.longitude) < 0.000001),
+                                locations[0] if locations else None)
+            if selected is not None:
+                rules = work.locations.rules(selected.id)
+    except DataAccessError:
+        pass
+    profile = profile_from_location(selected, rules)
+    g.location_profile = profile
+    g.locations = locations
+    return profile
 
 
 @app.before_request
@@ -190,9 +332,12 @@ def add_ui_notice(message: str) -> None:
 
 @app.context_processor
 def inject_ui_notice():
+    profile = selected_location_profile()
     return {
         'ui_notice': getattr(g, 'ui_notice', None),
         'request_id': getattr(g, 'request_id', None),
+        'selected_location': profile,
+        'active_locations': getattr(g, 'locations', ()),
     }
 
 
@@ -337,31 +482,34 @@ def requested_year(default: int = 2026) -> int:
     return year
 
 
-def forecast_period_after_window(window_end: datetime, total_days: int):
+def forecast_period_after_window(window_end: datetime, total_days: int,
+                                 timezone_name: str = settings.timezone_name):
     """Return the inclusive local-date forecast period after an observation window."""
     if window_end.tzinfo is None or window_end.utcoffset() is None:
         raise ValueError('window_end must be timezone-aware')
     if total_days < 1:
         raise ValueError('total_days must be at least 1')
 
-    local_end_date = window_end.astimezone(LOCATION_TIMEZONE).date()
+    local_end_date = window_end.astimezone(ZoneInfo(timezone_name)).date()
     start = local_end_date + timedelta(days=1)
     end = start + timedelta(days=total_days - 1)
     return start, end
 
 
-def build_cycle(year: int):
-    aadi_window = WINDOW_ENGINE.generate('aadi', year)
-    margazhi_window = WINDOW_ENGINE.generate('margazhi', year)
-    next_aadi_window = WINDOW_ENGINE.generate('aadi', year + 1)
+def build_cycle(year: int, profile: LocationProfile | None = None):
+    engine = profile.window_engine if profile else WINDOW_ENGINE
+    zone = profile.timezone_name if profile else settings.timezone_name
+    aadi_window = engine.generate('aadi', year)
+    margazhi_window = engine.generate('margazhi', year)
+    next_aadi_window = engine.generate('aadi', year + 1)
     a_start = aadi_window.start_datetime_local
     a_end = aadi_window.end_datetime_local
     m_start = margazhi_window.start_datetime_local
     m_end = margazhi_window.end_datetime_local
-    aadi_prediction_start, aadi_prediction_end = forecast_period_after_window(m_end, 180)
+    aadi_prediction_start, aadi_prediction_end = forecast_period_after_window(m_end, 180, zone)
     margazhi_prediction_start, margazhi_prediction_end = forecast_period_after_window(
         next_aadi_window.end_datetime_local,
-        140,
+        140, zone,
     )
     return {
         'year': year,
@@ -393,7 +541,9 @@ def dashboard_datetime(value):
     if not value:
         return 'தரவு இல்லை'
     parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
-    return parsed.astimezone(LOCATION_TIMEZONE).strftime('%d-%m-%Y %H:%M')
+    zone = (selected_location_profile().timezone_name if has_request_context()
+            else settings.timezone_name)
+    return parsed.astimezone(ZoneInfo(zone)).strftime('%d-%m-%Y %H:%M')
 
 
 @app.template_filter('quality_tamil')
@@ -416,11 +566,29 @@ def quality_tamil(value):
         return 'தரவு இல்லை'
     return ' + '.join(labels.get(part, part) for part in value.split('+'))
 
+
+@app.get('/health/live')
+def health_live():
+    return {'status': 'ok'}
+
+
+@app.get('/health/ready')
+def health_ready():
+    if database_is_ready(app.config['DATABASE_PATH']):
+        return {'status': 'ready'}
+    return {'status': 'unavailable'}, 503
+
 @app.route('/')
 def index():
     year = requested_year()
-    cycle = build_cycle(year)
-    dashboard = STATUS_DASHBOARD_SERVICE.build()
+    profile = selected_location_profile()
+    cycle = build_cycle(year, profile)
+    dashboard_service = (STATUS_DASHBOARD_SERVICE if is_default_profile(profile) else StatusDashboardService(
+        app.extensions['data_access'], profile.window_engine,
+        location_name=profile.name, latitude=profile.latitude,
+        longitude=profile.longitude, timezone_name=profile.timezone_name,
+    ))
+    dashboard = dashboard_service.build()
     lunar_events = [
         {
             'month_name': window.season_name_tamil,
@@ -436,7 +604,7 @@ def index():
         'index.html',
         cycle=cycle,
         selected_year=year,
-        calendar_rule=CALENDAR_RULE,
+        calendar_rule=profile.calendar_rule,
         lunar_events=lunar_events,
         lunar_error=None,
         dashboard=dashboard,
@@ -468,15 +636,16 @@ def prediction():
         )
         add_ui_notice('காட்சி வகை செல்லாது; நாள் காட்சி காட்டப்படுகிறது.')
         view_mode = 'day'
-    timeline, forecast_input = build_prediction_context(year, mode)
-    forecast_calendar = FORECAST_CALENDAR_SERVICE.build(timeline, view_mode)
+    profile = selected_location_profile()
+    timeline, forecast_input = build_prediction_context(year, mode, profile)
+    forecast_calendar = ForecastCalendarService(profile.calendar_rule).build(timeline, view_mode)
     return render_template(
         'prediction.html',
         mode=mode,
         year=year,
         days=timeline.total_days,
         start=fmt(timeline.prediction_start),
-        calendar_rule=CALENDAR_RULE,
+        calendar_rule=profile.calendar_rule,
         timeline=timeline,
         forecast_calendar=forecast_calendar,
         forecast_input=forecast_input,
@@ -491,21 +660,30 @@ def requested_prediction_mode() -> str:
     return 'aadi'
 
 
-def build_prediction_timeline(year: int, mode: str):
-    timeline, _ = build_prediction_context(year, mode)
+def build_prediction_timeline(year: int, mode: str, profile: LocationProfile | None = None):
+    timeline, _ = build_prediction_context(year, mode, profile)
     return timeline
 
 
-def build_prediction_context(year: int, mode: str):
-    cycle = build_cycle(year)
+def build_prediction_context(year: int, mode: str, profile: LocationProfile | None = None):
+    cycle = build_cycle(year, profile)
     source_window = cycle[f'{mode}_window']
     mapping_basis_end = (
         cycle['margazhi_window'].end_datetime_local
         if mode == 'aadi'
         else cycle['next_aadi_window'].end_datetime_local
     )
-    forecast_input = FORECAST_INPUT_SERVICE.score(source_window)
-    timeline = FORECAST_TIMELINE_ENGINE.generate(
+    inputs = (StoredForecastInputService(
+        app.extensions['data_access'], RESEARCH_SCORING_ENGINE,
+        WEATHER_QUALITY_VALIDATOR, location_name=profile.name,
+        latitude=profile.latitude, longitude=profile.longitude,
+        timezone_name=profile.timezone_name,
+        source=f'{WEATHER_PROVIDER_SPEC.key}:{WEATHER_PROVIDER_SPEC.model}',
+    ) if profile and not is_default_profile(profile) else FORECAST_INPUT_SERVICE)
+    forecast_input = inputs.score(source_window)
+    timeline_engine = (ForecastTimelineEngine(ZoneInfo(profile.timezone_name))
+                       if profile else FORECAST_TIMELINE_ENGINE)
+    timeline = timeline_engine.generate(
         source_window,
         mapping_basis_end_local=mapping_basis_end,
         research_score=forecast_input.research_score,
@@ -518,9 +696,12 @@ def build_prediction_context(year: int, mode: str):
 def prediction_csv():
     year = requested_year()
     mode = requested_prediction_mode()
-    timeline = build_prediction_timeline(year, mode)
-    csv_data = FORECAST_CALENDAR_SERVICE.export_csv(timeline)
-    filename = f'karuvottam-{mode}-{year}-forecast.csv'
+    profile = selected_location_profile()
+    timeline = build_prediction_timeline(year, mode, profile)
+    csv_data = ForecastCalendarService(profile.calendar_rule).export_csv(timeline)
+    suffix = (f'-location-{profile.location.id}'
+              if profile.location and not is_default_profile(profile) else '')
+    filename = f'karuvottam-{mode}-{year}{suffix}-forecast.csv'
     return Response(
         csv_data,
         content_type='text/csv; charset=utf-8',
@@ -533,7 +714,12 @@ def prediction_csv():
 @app.route('/calendar')
 def calendar_view():
     year = requested_year()
-    calendar = CALENDAR_VIEW_SERVICE.build(year)
+    profile = selected_location_profile()
+    calendar_service = (CALENDAR_VIEW_SERVICE if is_default_profile(profile) else CalendarViewService(
+        app.extensions['data_access'], profile.window_engine,
+        location_id=profile.location.id if profile.location else None,
+    ))
+    calendar = calendar_service.build(year)
     return render_template(
         'calendar.html',
         calendar=calendar,
@@ -543,6 +729,7 @@ def calendar_view():
 
 @app.route('/observations')
 def observations():
+    profile = selected_location_profile()
     raw_start = request.args.get('start', '').strip()
     raw_end = request.args.get('end', '').strip()
     source = request.args.get('source', '').strip() or None
@@ -560,7 +747,12 @@ def observations():
             )
             start_date = end_date = None
     try:
-        inspection = OBSERVATION_INSPECTION_SERVICE.build(
+        inspection_service = (OBSERVATION_INSPECTION_SERVICE if is_default_profile(profile) else ObservationInspectionService(
+            app.extensions['data_access'], location_name=profile.name,
+            latitude=profile.latitude, longitude=profile.longitude,
+            timezone_name=profile.timezone_name,
+        ))
+        inspection = inspection_service.build(
             start_date=start_date,
             end_date=end_date,
             source=source,
@@ -568,11 +760,84 @@ def observations():
     except ValueError as exc:
         app.logger.warning('Invalid observation range: %s', exc)
         input_error = 'தேதி வரம்பு செல்லாது அல்லது 366 நாட்களை மீறுகிறது.'
-        inspection = OBSERVATION_INSPECTION_SERVICE.build(source=source)
+        inspection = inspection_service.build(source=source)
     return render_template(
         'observations.html',
         inspection=inspection,
         input_error=input_error,
+    )
+
+
+@app.get('/events')
+def events():
+    profile = selected_location_profile()
+    is_default = (profile.name == settings.location_name
+                  and abs(profile.latitude - settings.latitude) < 0.000001
+                  and abs(profile.longitude - settings.longitude) < 0.000001
+                  and profile.timezone_name == settings.timezone_name)
+    service = (app.extensions['event_track_service'] if is_default else
+               EventTrackService(app.extensions['data_access'],
+                                 target_latitude=profile.latitude,
+                                 target_longitude=profile.longitude))
+    try:
+        default_year = service.latest_year() or datetime.now(ZoneInfo(profile.timezone_name)).year
+    except DataAccessError:
+        default_year = datetime.now(ZoneInfo(profile.timezone_name)).year
+    year = requested_year(default=default_year)
+    event_key = request.args.get('event') or None
+    try:
+        track = service.build(year, event_key)
+        impact_service = (app.extensions['event_impact_service'] if is_default else
+                          EventImpactService(
+                              app.extensions['data_access'], location_name=profile.name,
+                              target_latitude=profile.latitude,
+                              target_longitude=profile.longitude,
+                              timezone_name=profile.timezone_name))
+        impact = impact_service.build(track) if track.selected else None
+        warning = None
+    except DataAccessError:
+        track = None
+        impact = None
+        warning = 'நிகழ்வு தரவுத்தளம் தற்போது கிடைக்கவில்லை.'
+    try:
+        climate_context = app.extensions['climate_context_service'].build()
+        climate_warning = None
+    except DataAccessError:
+        climate_context = ()
+        climate_warning = 'பருவநிலைச் சுட்டித் தரவுத்தளம் தற்போது கிடைக்கவில்லை.'
+    default_evidence = app.extensions['event_dashboard_evidence_service']
+    evidence = (default_evidence if is_default else EventDashboardEvidenceService(
+        default_evidence.findings_dir, default_evidence.validation_dir,
+        default_evidence.dataset_dir, default_evidence.event_rainfall_dir,
+        latitude=profile.latitude, longitude=profile.longitude,
+        combined_validation_dir=default_evidence.combined_validation_dir,
+        calibration_dir=default_evidence.calibration_dir,
+    ))
+    comparison = evidence.comparison()
+    return render_template(
+        'events.html', track=track, impact=impact, year=year, warning=warning,
+        target_name=profile.name, climate_context=climate_context,
+        climate_warning=climate_warning,
+        comparison=comparison, event_rainfall=evidence.event_rainfall(),
+        combined_decision=evidence.combined_decision(comparison),
+        source_statuses=app.extensions['source_monitor_store'].statuses(),
+    )
+
+
+@app.get('/climate')
+def climate():
+    try:
+        context = app.extensions['climate_context_service'].build()
+        warning = None
+    except DataAccessError:
+        context = ()
+        warning = 'காலநிலைச் சுட்டித் தரவுத்தளம் தற்போது கிடைக்கவில்லை.'
+    return render_template(
+        'climate.html', context=context, warning=warning,
+        source_statuses=tuple(
+            item for item in app.extensions['source_monitor_store'].statuses()
+            if item.source in ('dmi', 'oni')
+        ),
     )
 
 if __name__ == '__main__':

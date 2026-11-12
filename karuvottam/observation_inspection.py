@@ -12,6 +12,7 @@ from karuvottam.data_access import (
     DataAccessError,
     LocationRecord,
     WeatherObservationRecord,
+    WeatherStationRecord,
 )
 
 
@@ -61,6 +62,7 @@ class ObservationInspection:
     start_date: date
     end_date: date
     selected_source: str | None
+    station: WeatherStationRecord | None
     available_sources: tuple[str, ...]
     records: tuple[WeatherObservationRecord, ...]
     recent_records: tuple[WeatherObservationRecord, ...]
@@ -112,6 +114,7 @@ class ObservationInspectionService:
             raise ValueError('now must be timezone-aware')
 
         warnings: list[str] = []
+        station = None
         try:
             with self.data_access.transaction() as work:
                 location = self._configured_location(work.locations.list_active())
@@ -142,6 +145,9 @@ class ObservationInspectionService:
                         location.id,
                         source=selected_source,
                     )
+                    station = next((item for item in
+                                    work.weather_stations.list_for_location(location.id)
+                                    if selected_source == f'station:{item.station_key}'), None)
 
                 if start_date is None or end_date is None:
                     reference_date = (
@@ -205,6 +211,7 @@ class ObservationInspectionService:
             start_date=start_date,
             end_date=end_date,
             selected_source=selected_source,
+            station=station,
             available_sources=sources,
             records=records,
             recent_records=records[-100:],
@@ -248,6 +255,7 @@ class ObservationInspectionService:
             start_date=resolved_start,
             end_date=resolved_end,
             selected_source=None,
+            station=None,
             available_sources=(),
             records=(),
             recent_records=(),

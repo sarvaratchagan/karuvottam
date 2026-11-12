@@ -348,10 +348,15 @@ def test_forecast_timeline_is_persisted_with_source_window_link(data_access):
     )
 
     with data_access.transaction() as work:
+        location = work.locations.add(
+            name='Forecast target', latitude=9.9, longitude=77.8,
+            elevation_m=None, timezone_name='Asia/Kolkata',
+        )
         stored_event = work.lunar_events.add(event)
         stored_window = work.karuvottam_windows.add(
             source_window,
             trigger_event_id=stored_event.id,
+            location_id=location.id,
         )
         stored_run = work.forecasts.add_timeline(
             timeline,
@@ -366,6 +371,10 @@ def test_forecast_timeline_is_persisted_with_source_window_link(data_access):
     assert reloaded_run == stored_run
     assert latest_run == stored_run
     assert stored_run.input_window_id == stored_window.id
+    with data_access.transaction() as work:
+        event = work.audit.list_recent(limit=1)[0]
+    assert event.action == 'forecast_generated'
+    assert event.record_id == str(stored_run.id)
     assert stored_run.source_window_key == 'aadi:2026:1.0'
     assert stored_run.model_version == 'daily-timeline-1.0'
     assert len(entries) == 180

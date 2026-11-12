@@ -46,6 +46,37 @@ body {
 	outline-offset: 3px;
 }
 
+.event-header form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.event-header label { font-weight: 700; }
+.event-map-panel { margin: 20px 0; }
+.event-map { width: 100%; height: auto; border: 1px solid #c8d8da; border-radius: 12px; }
+.event-map-background { fill: #e9f3f4; }
+.event-map-land path { fill: #e2e8d8; stroke: #78917d; stroke-width: 1.4; stroke-linejoin: round; }
+.event-map-states path { fill: none; stroke: #b1bfa8; stroke-width: .8; stroke-linejoin: round; }
+.event-map-labels text { font-size: 13px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #e2e8d8; stroke-width: 3px; fill: #48604a; }
+.event-map-labels .event-map-label-sea { fill: #527b8a; stroke: #e9f3f4; font-style: italic; }
+.event-path { fill: none; stroke-width: 3; stroke-linejoin: round; }
+.event-path-observed { stroke: #155f50; }
+.event-path-official_forecast { stroke: #a04d17; stroke-dasharray: 9 6; }
+.event-path-model_guidance { stroke: #5b4b9a; stroke-dasharray: 3 6; }
+.event-point-observed { fill: #155f50; }
+.event-point-official_forecast { fill: #a04d17; }
+.event-point-model_guidance { fill: #5b4b9a; }
+.event-target { fill: #b22626; stroke: #fff; stroke-width: 2; }
+.event-legend { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 12px 0; font-weight: 700; }
+.event-legend-observed { color: #155f50; }
+.event-legend-official { color: #a04d17; }
+.event-legend-model { color: #5b4b9a; }
+.event-legend-target, .event-stale { color: #9b2525; }
+.event-stale { font-weight: 700; }
+.event-context-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.event-context-grid article { border: 1px solid #d5e0d5; border-radius: 10px; padding: 16px; background: #f8faf6; }
+.event-context-grid h3 { margin-top: 0; }
+.event-timeline ol { list-style: none; padding: 0 0 0 18px; border-left: 3px solid #b7cabd; }
+.event-timeline li { position: relative; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0 0 16px 14px; }
+.event-timeline li::before { content: ''; position: absolute; left: -25px; top: 4px; width: 11px; height: 11px; border-radius: 50%; background: #155f50; }
+.event-timeline time { font-variant-numeric: tabular-nums; }
+
 .wrap {
 	max-width: 1100px;
 	margin: auto;

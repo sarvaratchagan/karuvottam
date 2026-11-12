@@ -22,6 +22,8 @@ KEY_PAGES = (
     '/prediction?year=2026&mode=aadi&view=week',
     '/prediction?year=2026&mode=margazhi&view=month',
     '/observations',
+    '/events?year=2025',
+    '/climate',
 )
 
 

@@ -176,7 +176,15 @@ class WeatherCsvService:
             quality_report=quality_report,
         )
 
-    def import_preview(self, preview: WeatherCsvPreview) -> WeatherCsvImportReport:
+    def import_preview(
+        self,
+        preview: WeatherCsvPreview,
+        *,
+        actor: str = 'system:weather-csv',
+        reason: str = 'Weather CSV import',
+    ) -> WeatherCsvImportReport:
+        if not actor.strip() or not reason.strip():
+            raise ValueError('actor and reason are required for CSV import')
         inserted = 0
         existing = 0
         with self.data_access.transaction() as work:
@@ -190,6 +198,14 @@ class WeatherCsvService:
                     inserted += 1
                 else:
                     existing += 1
+            if inserted:
+                work.audit.add(
+                    actor=actor,
+                    action='weather_csv_imported',
+                    record_type='location',
+                    record_id=str(preview.location_id),
+                    reason=f'{reason.strip()} (inserted {inserted} rows)',
+                )
         return WeatherCsvImportReport(
             total_rows=preview.total_rows,
             inserted_rows=inserted,

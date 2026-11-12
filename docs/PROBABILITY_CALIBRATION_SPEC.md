@@ -2,7 +2,7 @@
 
 **Calibration model version:** `score-bin-calibration-1.0`
 
-**Current publication state:** Withheld until real multi-year historical validation satisfies the gate
+**Current publication state:** Withheld after real multi-year historical evaluation failed the gate
 
 ## Purpose
 
@@ -23,7 +23,7 @@ All timestamps must be timezone-aware. A source-window key may have only one end
 
 1. Group samples by source window.
 2. Order complete groups by source-window end time.
-3. Use the earliest 70% of windows for training and the latest 30% for evaluation.
+3. By default, use the earliest 70% of windows for training and the latest 30% for evaluation. The historical run uses an explicit 2022–2024 holdout boundary.
 4. Never divide one source window between training and evaluation.
 5. Require all training target outcomes to end before the first evaluation source window begins.
 6. Reject duplicate source-window/target identities.
@@ -59,6 +59,10 @@ Probability output is enabled only when all conditions pass:
 
 Failure produces `status=withheld`, explicit reason codes, and `predict_probability(...) = None`. The metrics may still be retained for research diagnostics, but percentages must not be shown as forecasts.
 
-## Current limitation
+## Real-data result
 
-Automated tests use synthetic separable data only to verify calculations, time separation, determinism, boundary behavior, and the publication lock. Synthetic test success is **not calibration evidence**. T6.1 multi-year samples, T6.3 fixed-holdout metrics, T6.4 rolling validation, and the T6.5 paired findings summary now exist. These results do not establish Karuvottam incremental value, and the score-calibration publication gate has not passed; therefore the current hidden-probability state must not change.
+Run `python -m karuvottam.calibration_validation` after building the T6.1 dataset and T6.4 validation artifacts and importing the matching ERA5 hourly observations. The command verifies dataset and source-window provenance, computes `research-index-1.0` scores from those observations, excludes training windows whose target outcomes cross the holdout start, then writes a checksum-verified report to `data/exports/score-calibration-2015-2024/`. The export is generated locally and ignored by Git.
+
+For the configured Madurai-area location, 13 earlier windows yielded 2,100 training samples; six 2022–2024 windows yielded 960 held-out samples. One crossing 2021 Margazhi window was excluded. The held-out Brier score was **0.26152**, worse than the training-climatology baseline **0.24634**. ECE was **0.138479**, but only one reliability bin was populated. The gate therefore returned `withheld` for `no_brier_improvement_over_climatology` and `insufficient_populated_reliability_bins`.
+
+The task of evaluating calibration is complete. This result does not support publishing rain probabilities. The T6.5 paired findings also do not establish incremental value for the Karuvottam candidates. Automated synthetic tests verify the calculations and lock but are not the evidence behind this decision.

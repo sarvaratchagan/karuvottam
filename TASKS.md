@@ -65,7 +65,7 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 | T4.1 | Define and implement deterministic research scoring rules | P2 | T1.5, T2.4 | Done | Unassigned | Inputs, rationale, thresholds, output, and limitations are documented; identical input gives identical output; the score is not presented as probability |
 | T4.2 | Define rain categories | P2 | T4.1 | Done | Unassigned | No-rain, drizzle, moderate, and heavy thresholds specify amount and interval; boundary-value tests pass |
 | T4.3 | Generate 180/140-day experimental forecast timelines | P2 | T1.1, T1.5, T3.2, T4.1, T4.2 | Done | Unassigned | Target timestamps are correct; every output links to its source window, rule/model version, generation time, and quality; missing inputs produce “no data,” not invented values |
-| T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | In Progress | Unassigned | Calibration engine and gate exist; T6.1–T6.4 evidence does not establish incremental value and the score-calibration gate has not passed, so percentages remain hidden |
+| T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | Done | Unassigned | Real 2015–2024 source-window scores were evaluated with an embargoed 2022–2024 holdout; Brier 0.26152 versus climatology 0.24634 and the reliability-bin gate failed, so percentages remain hidden |
 
 ## Phase 5 — Deliver the Tamil web interface
 
@@ -93,9 +93,9 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 |---|---|---:|---|---|---|---|
 | T7.1 | Harden error handling and logging | P3 | M3 | Done | Unassigned | Users see safe, understandable errors; diagnostic logs omit secrets; API/database recovery behavior is documented and tested |
 | T7.2 | Add administration security | P3 | T7.1 | Done | Unassigned | Admin routes require authentication; inputs are validated; secrets stay in environment variables; debug is off; dependencies are reviewed |
-| T7.3 | Implement backup and recovery | P3 | T3.1, T2.5 | Todo | Unassigned | Scheduled database backups and CSV recovery paths exist; a restore test succeeds; the recovery procedure is documented |
-| T7.4 | Prepare production deployment | P3 | T7.1, T7.2, T7.3, T6.5 | Todo | Unassigned | WSGI, HTTPS, environment configuration, logs, health monitoring, and the pre-release checklist are verified |
-| T7.5 | Add audit history for manual changes and forecast runs | P3 | T3.2, T5.1 | Todo | Unassigned | Actor, action, record, reason, and timestamp are captured for manual edits and prediction-generation history |
+| T7.3 | Implement backup and recovery | P3 | T3.1, T2.5 | Done | Unassigned | Scheduled database backups and CSV recovery paths exist; a restore test succeeds; the recovery procedure is documented |
+| T7.4 | Prepare production deployment | P3 | T7.1, T7.2, T7.3, T6.5 | Done | Unassigned | WSGI, HTTPS, environment configuration, logs, health monitoring, and the pre-release checklist are verified |
+| T7.5 | Add audit history for manual changes and forecast runs | P3 | T3.2, T5.1 | Done | Unassigned | Actor, action, record, reason, and timestamp are captured for manual edits and prediction-generation history |
 
 ## Phase 8 — Integrated weather-event tracking and historical analysis
 
@@ -103,21 +103,21 @@ Establish the historical data model and map before recent/live ingestion. T8.7 a
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T8.1 | Define the common weather-event data model | P2 | T3.1, T3.2 | Todo | Unassigned | UACC, LPA, Depression, Deep Depression, and Cyclone events retain provider classification, stable event keys, complete update history, provenance, quality, and observed/official-forecast/model point types without overwriting intensity changes |
-| T8.2 | Build event ingestion, movement tracking, and the track map | P2 | T8.1, T8.7 | Todo | Unassigned | Historical data works first; permitted recent sources then ingest idempotently; tested geometry provides movement/distance; observed, official-forecast, and model-guidance paths remain visually and structurally distinct with source/update details |
-| T8.3 | Collect IOD and ENSO climate indices | P3 | T3.1, T8.7 | Todo | Unassigned | DMI/IOD and ENSO/ONI values retain period, issue date, provider, and data version; UI labels them as seasonal context rather than daily local-rain evidence |
-| T8.4 | Assess target-location impact | P3 | T2.4, T8.2 | Todo | Unassigned | Distance and motion are combined only with cited rain/model/observation evidence and relevant atmospheric inputs; output exposes data gaps, track/model disagreement, uncertainty, and validation status rather than treating an event as proof of rain |
-| T8.5 | Link historical events to rainfall | P2 | T6.1, T8.2 | Todo | Unassigned | Pre/during/post-event rainfall and distance bands are reproducibly compared; historical event/rain inputs preserve provenance and quality; time-ordered train/test evaluation prevents leakage |
-| T8.6 | Build the integrated event dashboard | P3 | T8.2, T8.3, T8.4, T8.5, T8.7 | Todo | Unassigned | Map, timeline, latest bulletin, motion, target distance, climate context, and freshness are visible; Karuvottam-only, modern-weather-only, and combined outputs remain separately identifiable and comparable over identical evaluation periods |
-| T8.7 | Enforce freshness, provenance, and failure handling | P2 | T2.4, T3.3 | Todo | Unassigned | Every event/index source exposes issue/retrieval time and staleness; unavailable or conflicting data is logged and shown without presenting old data as current |
-| T8.8 | Validate any combined Karuvottam/weather model | P3 | T6.4, T8.5, T8.6 | Todo | Unassigned | A combined model is exposed only if leakage-safe historical comparison over the same place, period, and metrics demonstrates incremental value; probabilities remain hidden until calibrated |
+| T8.1 | Define the common weather-event data model | P2 | T3.1, T3.2 | Done | Unassigned | UACC, LPA, Depression, Deep Depression, and Cyclone events retain provider classification, stable event keys, complete update history, provenance, quality, and observed/official-forecast/model point types without overwriting intensity changes |
+| T8.2 | Build event ingestion, movement tracking, and the track map | P2 | T8.1, T8.7 | Done | Unassigned | Historical data works first; permitted recent sources then ingest idempotently; tested geometry provides movement/distance; observed, official-forecast, and model-guidance paths remain visually and structurally distinct with source/update details |
+| T8.3 | Collect IOD and ENSO climate indices | P3 | T3.1, T8.7 | Done | Unassigned | DMI/IOD and ENSO/ONI values retain period, issue-time basis, retrieval date, provider, and data version; UI labels them as seasonal context rather than daily local-rain evidence |
+| T8.4 | Assess target-location impact | P3 | T2.4, T8.2 | Done | Unassigned | Distance and motion are combined only with cited rain/model/observation evidence and relevant atmospheric inputs; output exposes data gaps, track/model disagreement, uncertainty, and validation status rather than treating an event as proof of rain |
+| T8.5 | Link historical events to rainfall | P2 | T6.1, T8.2 | Done | Unassigned | Pre/during/post-event rainfall and distance bands are reproducibly compared; historical event/rain inputs preserve provenance and quality; time-ordered train/test evaluation prevents leakage |
+| T8.6 | Build the integrated event dashboard | P3 | T8.2, T8.3, T8.4, T8.5, T8.7 | Done | Unassigned | Map, timeline, latest bulletin, motion, target distance, climate context, and freshness are visible; Karuvottam-only, modern-weather-only, and combined outputs remain separately identifiable and comparable over identical evaluation periods |
+| T8.7 | Enforce freshness, provenance, and failure handling | P2 | T2.4, T3.3 | Done | Unassigned | IBTrACS events and climate indices expose source/retrieval times and stale status; scheduled source checks record success/failure separately and alert through nonzero health-check exits |
+| T8.8 | Validate any combined Karuvottam/weather model | P3 | T6.4, T8.5, T8.6 | Done | Unassigned | Checksum-verified T6 paired comparison, T8.5 event-rainfall holdout, and real-score calibration give a withheld decision; the T6 candidate has no event/climate features, and no combined forecast or probability is published |
 
 ## Phase 9 — Future enhancements
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T9.1 | Support multiple locations | P4 | M5 | Todo | Unassigned | Rules, ingestion, windows, predictions, and UI are isolated per location |
-| T9.2 | Integrate station/IoT sensor data | P4 | T9.1 | Todo | Unassigned | Sensor observations use a documented schema and participate in provenance and quality checks |
+| T9.1 | Support multiple locations | P4 | M5 | Done | Unassigned | Active-location selection, per-location calendar rules, location-keyed weather ingestion, stored windows and forecast runs, and location-matched UI/evidence are implemented; legacy single-location rows migrate when unambiguous |
+| T9.2 | Integrate station/IoT sensor data | P4 | T9.1 | Done | Unassigned | Registered site-matched station/IoT sensors accept documented hourly CSV, retain raw batch and per-reading provenance, reject conflicts and bad intervals, and appear as separately quality-checked observation sources |
 | T9.3 | Add email/message notifications | P4 | M5 | Todo | Unassigned | Users can configure meaningful alerts; delivery failures are visible and retryable |
 | T9.4 | Add user accounts and roles | P4 | T7.2 | Todo | Unassigned | Admin, researcher, viewer, and data-maintainer permissions are enforced |
 | T9.5 | Package as an installable mobile-friendly web app | P4 | T5.5, M5 | Todo | Unassigned | The supported mobile experience and offline/install behavior are documented and tested |

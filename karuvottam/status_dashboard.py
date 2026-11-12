@@ -85,7 +85,7 @@ class StatusDashboardService:
                             location_record.id
                         )
                     )
-                latest_forecast = work.forecasts.latest_run()
+                    latest_forecast = work.forecasts.latest_run(location_record.id)
         except DataAccessError:
             database_available = False
             warnings.append(

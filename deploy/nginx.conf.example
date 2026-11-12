@@ -1,0 +1,28 @@
+# Replace example.org and certificate paths; install in the host's nginx config.
+# The application WSGI server listens only on 127.0.0.1:8000.
+server {
+    listen 80;
+    server_name example.org;
+    return 308 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name example.org;
+    ssl_certificate /etc/letsencrypt/live/example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.org/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    client_max_body_size 1m;
+    access_log /var/log/nginx/karuvottam-access.log;
+    error_log /var/log/nginx/karuvottam-error.log warn;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Request-ID $request_id;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 65s;
+    }
+}

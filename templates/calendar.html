@@ -9,7 +9,7 @@
 <body>
 <a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
 <main class="wrap" id="main-content" tabindex="-1">
-    <a class="back" href="/?year={{selected_year}}">← முதற்பக்கம்</a>
+    <a class="back" href="/?year={{selected_year}}{{selected_location.query}}">← முதற்பக்கம்</a>
     <header class="calendar-header">
         <div>
             <div class="eyebrow">விதி மற்றும் மூலத்துடன்</div>
@@ -17,6 +17,7 @@
             <p>{{selected_year}} ஆண்டிற்கான ஆடி மற்றும் மார்கழி கண்காணிப்புச் சாளரங்கள்</p>
         </div>
         <form action="/calendar" method="get" aria-label="காலண்டர் ஆண்டு தேர்வு">
+            {% if selected_location.location %}<input type="hidden" name="location" value="{{selected_location.location.id}}">{% endif %}
             <label for="calendar-year">ஆண்டு</label>
                 <input id="calendar-year" name="year" type="number" value="{{selected_year}}" min="2015" max="2100">
             <button type="submit">காட்டு</button>

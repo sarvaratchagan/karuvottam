@@ -61,9 +61,11 @@ class CalendarViewService:
         self,
         data_access: DataAccess,
         window_engine: KaruvottamWindowEngine,
+        *, location_id: int | None = None,
     ) -> None:
         self.data_access = data_access
         self.window_engine = window_engine
+        self.location_id = location_id
 
     def build(self, year: int) -> CalendarView:
         if year < 1:
@@ -86,6 +88,7 @@ class CalendarViewService:
                             window.season_type,
                             window.season_year,
                             window.rule_version,
+                            location_id=self.location_id,
                         )
                     )
         except DataAccessError:

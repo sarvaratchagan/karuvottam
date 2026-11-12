@@ -194,6 +194,10 @@ def migrate_database(
 
             try:
                 # executescript() supports a sequence of SQL statements in one script.
+                # Rebuilding the legacy windows table requires foreign keys to be
+                # disabled before BEGIN; the migration recreates the same table name.
+                if migration.name == 'multi_location':
+                    connection.execute('PRAGMA foreign_keys = OFF')
                 connection.executescript(script)
             except sqlite3.DatabaseError as exc:
                 # Undo any uncommitted work before translating the database error.
@@ -202,6 +206,9 @@ def migrate_database(
                 raise MigrationError(
                     f'Failed to apply migration {migration.version:03d}_{migration.name}'
                 ) from exc
+            finally:
+                if migration.name == 'multi_location':
+                    connection.execute('PRAGMA foreign_keys = ON')
 
             # Report only migrations newly applied during this invocation.
             applied_now.append(migration.version)
