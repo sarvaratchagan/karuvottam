@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>IOD / ENSO பருவநிலைப் பின்னணி</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
+    <a class="back" href="/">← முதற்பக்கம்</a>
+    <header><div><div class="eyebrow">மூலமும் காலப்பகுதியும் இணைந்த சுட்டிகள்</div>
+        <h1>IOD / ENSO பருவநிலைப் பின்னணி</h1>
+        <p>இவை கடல் வெப்பநிலைச் சுட்டிகள். ஒரு குறிப்பிட்ட ஊரின் தினசரி மழை கணிப்பு அல்லது உறுதி அல்ல.</p></div></header>
+    {% if warning %}<section class="warnings" role="status"><p>{{warning}}</p></section>{% endif %}
+    <section class="card mb-25" aria-labelledby="climate-monitor-heading">
+        <h2 id="climate-monitor-heading">மூலப் பெறுதல் கண்காணிப்பு</h2>
+        <div class="event-context-grid">{% for source in source_statuses %}<article>
+            <h3>{{'DMI / IOD' if source.source == 'dmi' else 'ONI / ENSO'}}</h3>
+            <p>கடைசி முயற்சி: {{source.last_attempt_at or 'இல்லை'}} UTC · கடைசி வெற்றி: {{source.last_success_at or 'இல்லை'}} UTC</p>
+            {% if source.health == 'ok' %}<p>பெறுதல் அண்மையில் வெற்றி.</p>
+            {% else %}<p class="event-stale" role="status">பெறுதல் நிலை: {{source.health}}{% if source.last_error_code %} · {{source.last_error_code}}{% endif %}</p>{% endif %}
+            {% if source.latest_period_end %}<p>கடைசிக் காலம்: {{source.latest_period_end}}</p>{% endif %}
+        </article>{% endfor %}</div>
+    </section>
+    {% for item in context %}
+    <section class="card mb-25" aria-labelledby="{{item.index_type}}-title">
+        <h2 id="{{item.index_type}}-title">{{item.title}}</h2>
+        {% if not item.latest %}
+            <p>இந்தச் சுட்டிக்குச் சேமிக்கப்பட்ட மதிப்பு இல்லை.</p>
+        {% else %}
+            <p><strong>{{'%.3f'|format(item.latest.index_value)}} °C</strong> · {{item.latest.period_start}} முதல் {{item.latest.period_end}} வரை</p>
+            <p>வகை: {{item.latest.classification}} · தரம்: {{item.latest.quality_flag}}</p>
+            <p>மூலம்: <a href="{{item.latest.source_url}}" rel="noopener noreferrer">{{item.latest.provider}}</a> · தரவுப் பதிப்பு: {{item.latest.data_version}}</p>
+            <p>மூல நேரக் குறிப்பு: {{item.latest.issued_at}} ({{item.latest.issue_time_basis}}) · பெறப்பட்டது: {{item.latest.retrieved_at}}</p>
+            {% if item.stale %}<p class="event-stale" role="status">இந்தச் சுட்டியின் கடைசி காலப்பகுதி {{item.age_days}} நாட்கள் பழையது; தற்போதைய நிலையாகப் பயன்படுத்த வேண்டாம்.</p>{% else %}<p>கடைசி காலப்பகுதி {{item.age_days}} நாட்கள் பழையது.</p>{% endif %}
+            {% if item.index_type == 'enso_oni' %}<p class="foot">ONI-யின் ±0.5 °C பட்டை மட்டும் காட்டப்படுகிறது. இது அதிகாரப்பூர்வ El Niño / La Niña நிகழ்வு அறிவிப்பு அல்ல; NOAA தற்போது RONI-ஐ அதிகாரப்பூர்வ கண்காணிப்புக்கு பயன்படுத்துகிறது.</p>{% else %}<p class="foot">DMI நேர்மறை/எதிர்மறை குறி மட்டும் காட்டப்படுகிறது; தனியாக அதிகாரப்பூர்வ IOD நிகழ்வு அறிவிப்பு அல்ல.</p>{% endif %}
+            <div class="tablewrap"><table>
+                <caption>சமீபத்திய {{item.title}} மதிப்புகள்</caption>
+                <thead><tr><th scope="col">காலப்பகுதி</th><th scope="col">மதிப்பு (°C)</th><th scope="col">வகை</th><th scope="col">தரம்</th></tr></thead>
+                <tbody>{% for record in item.recent %}<tr><td>{{record.period_start}} → {{record.period_end}}</td><td>{{'%.3f'|format(record.index_value)}}</td><td>{{record.classification}}</td><td>{{record.quality_flag}}</td></tr>{% endfor %}</tbody>
+            </table></div>
+        {% endif %}
+    </section>
+    {% endfor %}
+</main>
+</body>
+</html>

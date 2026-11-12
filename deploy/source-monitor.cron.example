@@ -1,0 +1,10 @@
+# Install in the service account's crontab after editing absolute paths.
+# Send nonzero exits from these commands to the host's alerting system.
+KARUVOTTAM_DATABASE_PATH=/opt/karuvottam/data/karuvottam.sqlite3
+KARUVOTTAM_SOURCE_MONITOR_STATE=/opt/karuvottam/data/monitor/source_status.json
+KARUVOTTAM_LOG_PATH=/opt/karuvottam/data/logs/karuvottam.log
+
+15 0,12 * * * cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor poll --source active
+10 4 * * 1 cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor poll --source dmi
+25 4 * * 1 cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor poll --source oni
+0 5 * * * cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor check

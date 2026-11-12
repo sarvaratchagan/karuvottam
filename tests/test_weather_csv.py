@@ -93,7 +93,9 @@ def test_preview_reports_bad_rows_and_import_is_idempotent(tmp_path):
     assert preview.rows[1].errors == ('temperature_c must be numeric or blank',)
     assert preview.rows[2].errors == ('out_of_range:pressure_hpa',)
 
-    first = service.import_preview(preview)
+    first = service.import_preview(
+        preview, actor='operator:alice', reason='Recover archived weather'
+    )
     second = service.import_preview(preview)
 
     assert first.inserted_rows == 1
@@ -107,7 +109,12 @@ def test_preview_reports_bad_rows_and_import_is_idempotent(tmp_path):
             datetime(2025, 7, 1, tzinfo=timezone.utc),
             datetime(2025, 7, 1, 23, tzinfo=timezone.utc),
         )
+        audit_events = work.audit.list_recent()
     assert len(records) == 1
+    assert len(audit_events) == 1
+    assert audit_events[0].action == 'weather_csv_imported'
+    assert audit_events[0].actor == 'operator:alice'
+    assert audit_events[0].record_id == str(location.id)
 
 
 def test_preview_reports_duplicates_and_internal_missing_hours(tmp_path):

@@ -1,0 +1,20 @@
+# Replace user/group/path and supply secrets with an operator-owned EnvironmentFile.
+[Unit]
+Description=Karuvottam WSGI application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=karuvottam
+Group=karuvottam
+WorkingDirectory=/opt/karuvottam
+EnvironmentFile=/etc/karuvottam/karuvottam.env
+ExecStart=/opt/karuvottam/.venv/bin/gunicorn --bind 127.0.0.1:8000 --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile - wsgi:app
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

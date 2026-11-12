@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>வானிலை நிகழ்வு ஆதார முகப்பு</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
+    <a class="back" href="/?{{selected_location.query[1:]}}">← முதற்பக்கம்</a>
+    <header class="event-header">
+        <div><div class="eyebrow">நிகழ்வு, உள்ளூர் ஆதாரம் மற்றும் ஆய்வு முடிவுகள்</div>
+            <h1>வானிலை நிகழ்வுப் பாதைகள் · ஆதார முகப்பு</h1>
+            <p>இலக்கு இடம்: {{target_name}}. நிகழ்வுப் பாதை, இலக்கிட நிலை, IOD/ENSO பின்னணி, வரலாற்று மழை மற்றும் மாதிரி ஒப்பீடு.</p></div>
+        <form action="/events" method="get" aria-label="நிகழ்வு தேர்வு">
+            {% if selected_location.location %}<input type="hidden" name="location" value="{{selected_location.location.id}}">{% endif %}
+            <label for="event-year">ஆண்டு</label>
+            <input id="event-year" type="number" name="year" min="2015" max="2100" value="{{year}}">
+            <label for="event-key">நிகழ்வு</label>
+            <select id="event-key" name="event">
+                {% if track %}{% for event in track.events %}
+                    <option value="{{event.event_key}}" {{'selected' if track.selected and event.event_key == track.selected.event_key else ''}}>{{event.event_key}} · {{event.provider_classification}} · {{event.issued_at[:10]}}</option>
+                {% endfor %}{% endif %}
+            </select>
+            <button type="submit">காட்டு</button>
+        </form>
+    </header>
+    <nav class="page-nav" aria-label="இந்தப் பக்கப் பகுதிகள்">
+        {% if track and track.selected %}<a href="#event-map">பாதை வரைபடம்</a>{% endif %}
+        <a href="#climate-context">IOD / ENSO</a>
+        <a href="#historical-evidence">வரலாற்று மழை</a>
+        <a href="#research-comparison">மாதிரி ஒப்பீடு</a>
+    </nav>
+
+    <section class="card" aria-labelledby="source-monitor-heading">
+        <h2 id="source-monitor-heading">தரவு மூலம் புதுப்பிப்பு நிலை</h2>
+        <p class="foot">கடைசியாக மூலத்தைப் பார்த்த நேரமும் கடைசி வெற்றிகரமான பெறுதலும் தனித்தனியாகக் காட்டப்படுகின்றன. Active IBTrACS கோப்பு தற்போதைய அதிகாரப்பூர்வ எச்சரிக்கை அல்ல.</p>
+        <div class="event-context-grid">{% for source in source_statuses %}<article>
+            <h3>{{'IBTrACS active' if source.source == 'active' else 'DMI / IOD' if source.source == 'dmi' else 'ONI / ENSO'}}</h3>
+            {% if source.health == 'ok' %}<p>மூலப் பெறுதல் நிலை: அண்மையில் வெற்றி.</p>
+            {% elif source.health == 'never_polled' %}<p class="event-stale" role="status">தானியக்க மூலப் பெறுதல் இன்னும் இயங்கவில்லை.</p>
+            {% elif source.health == 'last_attempt_failed' %}<p class="event-stale" role="status">கடைசி மூலப் பெறுதல் தோல்வி: {{source.last_error_code}}.</p>
+            {% elif source.health == 'poll_overdue' %}<p class="event-stale" role="status">மூலப் பெறுதல் காலம் கடந்துவிட்டது.</p>
+            {% elif source.health == 'index_stale' %}<p class="event-stale" role="status">சுட்டியின் கடைசிக் காலப்பகுதி பழையது.</p>
+            {% else %}<p class="event-stale" role="status">கண்காணிப்பு நிலைக் கோப்பைப் படிக்க முடியவில்லை.</p>{% endif %}
+            <p>கடைசி முயற்சி: {{source.last_attempt_at or 'இல்லை'}} UTC<br>கடைசி வெற்றி: {{source.last_success_at or 'இல்லை'}} UTC</p>
+            {% if source.last_retrieved_at %}<p>மூலத் தரவு பெறப்பட்டது: {{source.last_retrieved_at}} UTC</p>{% endif %}
+            {% if source.latest_period_end %}<p>சமீபத்திய சுட்டிக் காலம் முடிந்தது: {{source.latest_period_end}}</p>{% endif %}
+            {% if source.last_digest %}<p class="foot">மூல SHA-256: {{source.last_digest[:16]}}… · பயன்படும் வரிசைகள்: {{source.last_usable_rows}} · தவிர்க்கப்பட்டவை: {{source.last_skipped_rows}}{% if source.last_missing_points %} · இடமில்லாத புள்ளிகள்: {{source.last_missing_points}}{% endif %}</p>{% endif %}
+            {% if source.no_usable_rows %}<p class="foot">கடைசி active கோப்பில் பயன்படும் வகைப்படுத்தப்பட்ட NI புள்ளிகள் இல்லை. இதனால் நிகழ்வு இல்லை என்று முடிவு செய்ய முடியாது.</p>{% endif %}
+        </article>{% endfor %}</div>
+    </section>
+
+    {% if warning %}<section class="warnings" role="status"><p>{{warning}}</p></section>{% endif %}
+    {% if not track or not track.selected %}
+        <section class="card"><h2>நிகழ்வுத் தரவு இல்லை</h2>
+            <p>{{year}} ஆண்டிற்கான North Indian Ocean பாதைத் தரவு சேமிக்கப்படவில்லை. வரலாற்று IBTrACS இறக்குமதியை இயக்கவும்.</p></section>
+    {% else %}
+        <section class="card event-summary">
+            <h2>{{track.selected.event_key}} · {{track.selected.provider_classification}}</h2>
+            <p>Normalized வகை: {{track.selected.event_type}} · தரம்: {{track.selected.quality_flag}} · கடைசி அறிவிப்பு: {{track.selected.issued_at}} UTC</p>
+            <p>மூலம்: <a href="{{track.selected.source_url}}" rel="noopener noreferrer">NOAA IBTrACS CSV</a> · பெறப்பட்டது: {{track.selected.retrieved_at}} UTC</p>
+            {% if track.stale %}<p class="event-stale" role="status">இந்தப் பாதை தற்போதைய நேரடி நிகழ்வு அல்ல. கடைசி நிலைப் புள்ளி {{track.latest_age_hours if track.latest_age_hours is not none else 'தெரியாது'}} மணி நேரம் பழையது.</p>{% else %}
+                <p>கடைசி நிலைப் புள்ளி {{track.latest_age_hours}} மணி நேரம் பழையது. IBTrACS தற்காலிகத் தரவு; அதிகாரப்பூர்வ நேரடி எச்சரிக்கை அல்ல.</p>{% endif %}
+            {% if track.motion %}<p>கடைசி இரண்டு கண்காணிப்புப் புள்ளிகளுக்கிடையிலான நகர்வு: {{track.motion.distance_km}} km · {{track.motion.speed_kmh}} km/h · {{track.motion.direction_deg}}° (வடக்கிலிருந்து கடிகாரத் திசை).</p>{% endif %}
+            {% if track.target_distance_km is not none %}<p>{{target_name}} இலக்கிலிருந்து கடைசி மையப் புள்ளி: {{track.target_distance_km}} km. இது மழை வாய்ப்பு அல்ல.</p>{% endif %}
+            {% if track.forecast_shift_km is not none %}<p>அடுத்தடுத்த அதிகாரப்பூர்வ பாதைப் புதுப்பிப்புகளின் அதிகபட்ச ஒரே நேரப் புள்ளி மாற்றம்: {{track.forecast_shift_km}} km.</p>{% endif %}
+        </section>
+
+        <section class="card event-timeline" aria-labelledby="event-timeline-heading">
+            <h2 id="event-timeline-heading">நிகழ்வு காலவரிசை</h2>
+            <p class="foot">சமீபத்திய {{12 if track.history|length > 12 else track.history|length}} அறிவிப்புகள்; முழு வரலாறு கீழே உள்ளது.</p>
+            <ol>{% for advisory in track.history[-12:] %}<li>
+                <time datetime="{{advisory.issued_at}}">{{advisory.issued_at}} UTC</time>
+                <strong>{{advisory.provider_classification}}</strong>
+                <span>{{advisory.center_latitude}}, {{advisory.center_longitude}} · {{advisory.quality_flag}}</span>
+            </li>{% endfor %}</ol>
+        </section>
+
+        {% if impact %}<section class="card event-impact" aria-labelledby="impact-heading">
+            <h2 id="impact-heading">{{target_name}} தாக்க ஆதார நிலை</h2>
+            <p class="event-stale" role="status">தாக்க மதிப்பீடு: ஆதாரம் போதவில்லை. மழை வாய்ப்பு அல்லது தாக்கத் தரம் கணிக்கப்படவில்லை.</p>
+            <p>கடைசி கண்காணிப்பு நேரம்: {{impact.reference_at or 'இல்லை'}} UTC.
+                {% if impact.distance_km is not none %}மையத் தூரம்: {{impact.distance_km}} km.{% endif %}
+                {% if impact.distance_change_km is not none %}முந்தைய புள்ளியிலிருந்து தூர மாற்றம்: {{impact.distance_change_km}} km (எதிர்மறை என்றால் அருகே வந்துள்ளது).{% endif %}
+            </p>
+            {% if impact.model_disagreement_km is not none %}<p>ஒரே நேரத்திற்கான அதிகாரப்பூர்வ/மாதிரி பாதைகளின் அதிகபட்ச இடைவெளி: {{impact.model_disagreement_km}} km. இது பாதை ஒப்பீடு மட்டுமே.</p>{% endif %}
+            {% if impact.observation_source %}<p>இலக்கிட உள்ளூர் வானிலைப் பதிவுகள்: {{impact.observation_source}} · முந்தைய 24 மணிநேரத்தில் {{impact.observation_hours}} தரச் சரிபார்க்கப்பட்ட மணி நேரங்கள்.
+                {% if impact.rain_mm is not none %}மழை: {{impact.rain_mm}} மி.மீ. (24/24 மணி நேரங்கள்).{% endif %}
+                {% if impact.humidity_pct is not none %}சராசரி ஈரப்பதம்: {{impact.humidity_pct}}%.{% endif %}
+                {% if impact.cloud_cover_pct is not none %}சராசரி மேகம்: {{impact.cloud_cover_pct}}%.{% endif %}
+                {% if impact.surface_wind_kmh is not none %}சராசரி தரைமட்டக் காற்று: {{impact.surface_wind_kmh}} km/h.{% endif %}
+            </p>
+                {% if impact.observation_references %}<p class="foot">மூலப் பதிவுக் குறிப்புகள்: {{impact.observation_references|join(', ')}}</p>{% endif %}
+                {% if impact.observation_source == 'open-meteo:era5' %}<p class="foot">ERA5 வரலாற்று மறு-பகுப்பாய்வு; நேரடி மழைமானி அளவீடு அல்ல.</p>{% endif %}
+            {% endif %}
+            <h3>ஆதார இடைவெளிகள்</h3>
+            <ul>{% for gap in impact.gaps %}<li>{{gap}}</li>{% endfor %}</ul>
+            <p class="foot">இவை நிகழ்வு நேரத்தருகேயுள்ள உள்ளூர் நிலைகள்; மழைக்கு இந்த நிகழ்வே காரணம் என்பதற்கான சான்று அல்ல. வரலாற்று தூர மாதிரி அடிப்படை ஒப்பீட்டை முந்தவில்லை.</p>
+        </section>{% endif %}
+
+        <section class="card event-map-panel" id="event-map">
+            <h2>பாதை வரைபடம்</h2>
+            <div class="event-legend" aria-label="பாதை வகைகள்">
+                <span class="event-legend-observed">● கடந்த கண்காணிப்பு</span>
+                <span class="event-legend-official">┄ அதிகாரப்பூர்வ முன்னறிவிப்பு</span>
+                <span class="event-legend-model">┈ மாதிரி வழிகாட்டுதல்</span>
+                <span class="event-legend-target">◆ இலக்கு இடம்</span>
+            </div>
+            <svg class="event-map" viewBox="0 0 900 500" role="img" aria-label="தென்னிந்தியா நிலவரைபடத்தில் {{track.selected.event_key}} நிகழ்வின் வகைப்படுத்தப்பட்ட பாதைகளும் இலக்கு இடமும்">
+                <rect x="0" y="0" width="900" height="500" class="event-map-background"/>
+                <g class="event-map-land" aria-hidden="true">
+                    {% for country in track.countries %}<path d="{{country.d}}" fill-rule="evenodd"/>{% endfor %}
+                </g>
+                <g class="event-map-states" aria-hidden="true">
+                    {% for state in track.states %}<path d="{{state.d}}"/>{% endfor %}
+                </g>
+                <g class="event-map-labels" aria-hidden="true">
+                    {% for label in track.map_labels %}<text class="event-map-label-{{label.kind}}" x="{{label.point.x}}" y="{{label.point.y}}">{{label.name}}</text>{% endfor %}
+                </g>
+                {% for path in track.paths %}
+                    {% if path.points|length > 1 %}
+                        <polyline class="event-path event-path-{{path.point_type}}" points="{% for point in path.points %}{{point.x}},{{point.y}} {% endfor %}">
+                            <title>{{path.label}} · {{path.source}}{% if path.issued_at %} · வெளியீடு {{path.issued_at}}{% endif %}</title>
+                        </polyline>
+                    {% endif %}
+                    {% for point in path.points %}
+                        <circle class="event-point event-point-{{path.point_type}}" cx="{{point.x}}" cy="{{point.y}}" r="4">
+                            <title>{{path.label}} · {{point.valid_at}} · {{point.latitude}}, {{point.longitude}}</title>
+                        </circle>
+                    {% endfor %}
+                {% endfor %}
+                <path class="event-target" d="M {{track.target.x}} {{track.target.y - 8}} l 8 8 -8 8 -8 -8 z">
+                    <title>{{target_name}} · {{track.target.latitude}}, {{track.target.longitude}}</title>
+                </path>
+            </svg>
+            <p class="foot">தென்னிந்திய நிலம் மற்றும் மாநில எல்லைகள்: <a href="https://www.naturalearthdata.com/" rel="noopener noreferrer">Natural Earth</a> (public domain, 1:50m; பொதுப் புவியியல் குறிப்பு). பாதைக் கோடுகள் சேமிக்கப்பட்ட புள்ளிகளை மட்டும் இணைக்கின்றன; எதிர்கால நேர்கோட்டுப் பாதை உருவாக்கப்படவில்லை.</p>
+            {% if not track.paths %}<p>இந்த நிகழ்வுக்குப் பாதைப் புள்ளிகள் இல்லை.</p>{% endif %}
+            {% if not track.paths|selectattr('point_type', 'equalto', 'official_forecast')|list %}<p>அதிகாரப்பூர்வ முன்னறிவிப்புப் பாதை இந்தத் தரவுத் தொகுப்பில் இல்லை.</p>{% endif %}
+            {% if not track.paths|selectattr('point_type', 'equalto', 'model_guidance')|list %}<p>மாதிரி வழிகாட்டும் பாதை இந்தத் தரவுத் தொகுப்பில் இல்லை.</p>{% endif %}
+        </section>
+
+        <section class="card tablewrap">
+            <h2>அறிவிப்பு வரலாறு</h2>
+            <table><caption class="sr-only">நிகழ்வு அறிவிப்புகளின் வரலாறு</caption>
+                <thead><tr><th scope="col">வெளியீடு (UTC)</th><th scope="col">அசல் வகை</th><th scope="col">மையம்</th><th scope="col">தரம்</th><th scope="col">மூலம்</th></tr></thead>
+                <tbody>{% for advisory in track.history %}<tr>
+                    <td>{{advisory.issued_at}}</td><td>{{advisory.provider_classification}}</td>
+                    <td>{{advisory.center_latitude}}, {{advisory.center_longitude}}</td>
+                    <td>{{advisory.quality_flag}}</td><td>{{advisory.source_reference}}</td>
+                </tr>{% endfor %}</tbody>
+            </table>
+        </section>
+    {% endif %}
+
+    <section class="card" id="climate-context" aria-labelledby="climate-context-heading">
+        <h2 id="climate-context-heading">IOD / ENSO பருவநிலைப் பின்னணி</h2>
+        <p class="foot">மாத/மூன்று மாதக் கடல் வெப்பநிலைச் சுட்டிகள்; தினசரி உள்ளூர் மழை முன்னறிவிப்பு அல்ல. <a href="/climate">விரிவான பதிவுகள் →</a></p>
+        {% if climate_warning %}<p role="status">{{climate_warning}}</p>{% endif %}
+        <div class="event-context-grid">{% for item in climate_context %}<article>
+            <h3>{{item.title}}</h3>
+            {% if item.latest %}
+                <p><strong>{{'%.3f'|format(item.latest.index_value)}} °C</strong> · {{item.latest.classification}}</p>
+                <p>காலம்: {{item.latest.period_start}} → {{item.latest.period_end}} · தரம்: {{item.latest.quality_flag}}</p>
+                <p>மூலம்: <a href="{{item.latest.source_url}}" rel="noopener noreferrer">{{item.latest.provider}}</a> · {{item.latest.data_version}}</p>
+                <p>மூல நேரம்: {{item.latest.issued_at}} ({{item.latest.issue_time_basis}}) · பெறப்பட்டது: {{item.latest.retrieved_at}}</p>
+                {% if item.stale %}<p class="event-stale" role="status">காலாவதியான பின்னணி ({{item.age_days}} நாட்கள்).</p>{% else %}<p>கடைசி காலப்பகுதி {{item.age_days}} நாட்கள் பழையது.</p>{% endif %}
+            {% else %}<p>சேமிக்கப்பட்ட மதிப்பு இல்லை.</p>{% endif %}
+        </article>{% endfor %}</div>
+    </section>
+
+    <section class="card" id="historical-evidence" aria-labelledby="historical-evidence-heading">
+        <h2 id="historical-evidence-heading">வரலாற்று நிகழ்வு–மழை ஆய்வு</h2>
+        {% if event_rainfall.available %}
+            <p>{{event_rainfall.first_year}}–{{event_rainfall.last_year}}: {{event_rainfall.event_count}} நிகழ்வுகள்; {{event_rainfall.complete_count}} முழுமையான முன்/நிகழ்வு/பின் மழைச் சாளரங்கள்.</p>
+            {% if event_rainfall.baseline_mae is not none %}<p>{{event_rainfall.split_year}} முதல் {{event_rainfall.test_events}} சோதனை நிகழ்வுகள்: பயிற்சிச் சராசரி MAE {{event_rainfall.baseline_mae}} மி.மீ./24 மணி; தொடக்கத் தூர மாதிரி MAE {{event_rainfall.distance_mae}} மி.மீ./24 மணி.</p>{% endif %}
+            <p class="foot">IBTrACS வரலாற்றுப் பாதை + {{event_rainfall.weather_sources|join(', ')}} உள்ளூர் வானிலைத் தரவு. ERA5 பயன்படுத்தப்பட்டால் அது மறு-பகுப்பாய்வு; மழைமானி அல்ல. இது நிகழ்வு மழைக்குக் காரணம் என்ற சான்றோ தற்போதைய தாக்க மதிப்பீடோ அல்ல.</p>
+        {% else %}<p role="status">சரிபார்க்கப்பட்ட நிகழ்வு–மழை ஆய்வு வெளியீடு இந்தச் சேவையில் இல்லை.</p>{% endif %}
+    </section>
+
+    <section class="card" id="research-comparison" aria-labelledby="research-comparison-heading">
+        <h2 id="research-comparison-heading">ஒரே காலப்பகுதியில் மாதிரி ஒப்பீடு</h2>
+        {% if comparison.available %}
+            <p>{{comparison.first_year}}–{{comparison.last_year}} rolling holdout · ஒவ்வொரு முறைக்கும் அதே {{comparison.matched_days}} நாள் பதிவுகள் · ஆதார விசை {{comparison.findings_key}}.</p>
+            <div class="tablewrap"><table>
+                <caption>ஒரே நாள் மற்றும் இடத்தில் மூன்று ஆய்வு முறைகளின் கடந்தகாலப் பிழை</caption>
+                <thead><tr><th scope="col">முறை</th><th scope="col">MAE (மி.மீ.)</th><th scope="col">RMSE (மி.மீ.)</th><th scope="col">Brier</th></tr></thead>
+                <tbody>{% for row in comparison.rows %}<tr><th scope="row">{{row.label}}</th><td>{{'%.3f'|format(row.mae_mm)}}</td><td>{{'%.3f'|format(row.rmse_mm)}}</td><td>{{'%.3f'|format(row.brier_score)}}</td></tr>{% endfor %}</tbody>
+            </table></div>
+            {% if not comparison.incremental_value_supported %}<p class="event-stale" role="status">கருவோட்டம் சேர்த்த முறைகளுக்கு அடிப்படை முறையைவிட கூடுதல் முன்னறிவிப்புத் திறன் நிரூபிக்கப்படவில்லை.</p>{% endif %}
+            <p class="foot">“நவீன வானிலை மட்டும்” என்பது முந்தைய உள்ளூர் ERA5 மழையிலிருந்து உருவான பருவச் சராசரி. “இரண்டும் இணைந்தது” என்பது கருவோட்டச் சாளர வானிலை அம்சங்களைக் கொண்ட T6 ஆய்வு மாதிரி; நிகழ்வுப் பாதை அல்லது IOD/ENSO இதில் இன்னும் சேர்க்கப்படவில்லை. இவை பொதுப் பயன்பாட்டு மழை வாய்ப்புகள் அல்ல.</p>
+        {% else %}<p role="status">ஒரே காலப்பகுதி மற்றும் இடத்துக்கான சரிபார்க்கப்பட்ட மாதிரி ஒப்பீடு கிடைக்கவில்லை; மதிப்புகள் காட்டப்படவில்லை.</p>{% endif %}
+    </section>
+    <section class="card" aria-labelledby="combined-decision-heading">
+        <h2 id="combined-decision-heading">ஒருங்கிணைந்த மாதிரி வெளியீட்டு முடிவு</h2>
+        {% if combined_decision.available %}
+            {% if combined_decision.status == 'withheld' %}<p class="event-stale" role="status">T8.8 சரிபார்ப்பு: பொதுப் பயன்பாட்டு ஒருங்கிணைந்த மாதிரி வெளியீடு நிறுத்தப்பட்டுள்ளது.</p>{% else %}<p role="status">வரலாற்று ஆய்வு ஆதாரம் கிடைத்துள்ளது; செயல்பாட்டு மாதிரி வெளியீடு இன்னும் இயக்கப்படவில்லை.</p>{% endif %}
+            {% if combined_decision.brier_ci_upper is not none %}<p>பருவச் சராசரியை ஒப்பிட்ட Brier மாற்றத்தின் 95% நம்பக இடைவெளி மேல் எல்லை: {{'%.3f'|format(combined_decision.brier_ci_upper)}}; மழை அளவு MAE மாற்றத்தின் மேல் எல்லை: {{'%.3f'|format(combined_decision.mae_ci_upper_mm)}} மி.மீ. கூடுதல் திறனுக்கு இரண்டும் 0-க்குக் கீழ் இருக்க வேண்டும்.</p>{% endif %}
+            <ul>{% for reason in combined_decision.reasons %}<li>
+                {% if reason == 'combined_no_incremental_value' %}ஒருங்கிணைந்த ஆய்வு மாதிரி அடிப்படை முறையைவிட கூடுதல் திறன் நிரூபிக்கவில்லை.
+                {% elif reason == 'score_calibration_gate_failed' %}உண்மையான வரலாற்றுத் தரவில் மதிப்பெண் அளவுத்திருத்தம் gate-ஐ கடக்கவில்லை.
+                {% elif reason == 'event_distance_no_incremental_value' %}நிகழ்வு தொடக்கத் தூர மாதிரி அதன் அடிப்படை முறையை முந்தவில்லை.
+                {% elif reason == 'event_climate_candidate_not_evaluated' %}நிகழ்வுப் பாதை/IOD/ENSO அம்சங்களைக் கொண்ட இணைந்த மாதிரி இன்னும் மதிப்பிடப்படவில்லை.
+                {% else %}ஆதாரம் முழுமையில்லை: {{reason}}.{% endif %}
+            </li>{% endfor %}</ul>
+            <p class="foot">மழை வாய்ப்பு சதவீதங்களும் செயல்பாட்டு மழை அளவு மாதிரியும் வெளியிடப்படவில்லை.</p>
+        {% else %}<p role="status">சரிபார்க்கப்பட்ட T8.8 முடிவு artifact கிடைக்கவில்லை; ஒருங்கிணைந்த மாதிரி வெளியீடு முடக்கப்பட்டுள்ளது.</p>{% endif %}
+    </section>
+</main>
+</body>
+</html>

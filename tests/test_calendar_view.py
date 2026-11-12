@@ -84,8 +84,14 @@ def test_calendar_view_links_matching_persisted_window(tmp_path):
     aadi = engine.generate('aadi', 2026)
 
     with data_access.transaction() as work:
+        location = work.locations.add(
+            name='Calendar target', latitude=9.9, longitude=77.8,
+            elevation_m=None, timezone_name='Asia/Kolkata',
+        )
         event = work.lunar_events.add(aadi.trigger_event)
-        stored = work.karuvottam_windows.add(aadi, trigger_event_id=event.id)
+        stored = work.karuvottam_windows.add(
+            aadi, trigger_event_id=event.id, location_id=location.id,
+        )
 
     view = CalendarViewService(data_access, engine).build(2026)
 

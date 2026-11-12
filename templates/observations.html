@@ -9,7 +9,7 @@
 <body>
 <a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
 <main class="wrap observation-page" id="main-content" tabindex="-1">
-    <a class="back" href="/">← முதற்பக்கம்</a>
+    <a class="back" href="/?{{selected_location.query[1:] if selected_location is defined else ''}}">← முதற்பக்கம்</a>
     <header class="observation-header">
         <div>
             <div class="eyebrow">சேமிக்கப்பட்ட மணிநேரப் பதிவுகள்</div>
@@ -17,6 +17,7 @@
             <p>{{inspection.location_name}}</p>
         </div>
         <form class="inspection-filter" action="/observations" method="get" aria-label="தரவு ஆய்வு வடிகட்டி">
+            {% if selected_location is defined and selected_location.location %}<input type="hidden" name="location" value="{{selected_location.location.id}}">{% endif %}
             <label for="inspection-start">தொடக்கம்
                 <input id="inspection-start" type="date" name="start" value="{{inspection.start_date.isoformat()}}">
             </label>
@@ -38,6 +39,15 @@
     {% if input_error %}<section class="warnings" role="alert"><p>{{input_error}}</p></section>{% endif %}
     {% if inspection.warnings %}
         <section class="warnings" role="status"><ul>{% for warning in inspection.warnings %}<li>{{warning}}</li>{% endfor %}</ul></section>
+    {% endif %}
+
+    {% if inspection.station %}
+        <section class="card" aria-label="நிலையத் தரவு மூலம்">
+            <h2>தரைக் கண்காணிப்பு மூலம்</h2>
+            <p>{{inspection.station.name}} · {{inspection.station.station_key}} · {{inspection.station.provider}}</p>
+            <p class="foot">{{'IoT உணர்கருவி' if inspection.station.source_kind == 'iot' else 'வானிலை நிலையம்'}} · {{inspection.station.latitude}}, {{inspection.station.longitude}} · {{inspection.station.timezone}}</p>
+            <p class="foot">இந்த அளவீடுகள் நிலையத்திலிருந்து வந்தவை. ERA5 மறுபகுப்பாய்வுடன் கலக்கப்படவில்லை; தனி மூலமாகத் தேர்ந்தெடுக்கப்பட்டுள்ளன.</p>
+        </section>
     {% endif %}
 
     <section class="inspection-summary" aria-label="தரவு சுருக்கம்">

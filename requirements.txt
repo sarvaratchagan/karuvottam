@@ -1,4 +1,5 @@
 Flask>=3.0,<4
+gunicorn>=22,<24
 astronomy-engine==2.1.19
 python-dotenv>=1.0,<2
 certifi>=2024.2.2
