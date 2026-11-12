@@ -7,16 +7,91 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="wrap">
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
     <header>
         <div>
             <div class="eyebrow">கருவோட்டம் • MVP</div>
             <h1>தன்னியக்க துல்லிய மழை முன்னறிவிப்பு திட்டம்</h1>
             <p>ஆடி 18 நாள் → 180 நாள் | மார்கழி 11 நாள் → 140 நாள்</p></div>
-        <form><label>ஆண்டு <input name="year" type="number" value="{{selected_year}}" min="2020" max="2100"></label>
-            <button>காட்டு</button>
+        <form method="get" aria-label="ஆண்டு தேர்வு"><label for="home-year">ஆண்டு</label>
+            <input id="home-year" name="year" type="number" value="{{selected_year}}" min="2015" max="2100">
+            <button type="submit">காட்டு</button>
         </form>
     </header>
+    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
+    <nav class="page-nav" aria-label="முக்கிய பக்கங்கள்">
+        <a href="/calendar?year={{selected_year}}">கருவோட்டக் காலண்டர் மற்றும் விதிகளைப் பார்க்க →</a>
+        <a href="/observations">வானிலைத் தரவை ஆய்வு செய்ய →</a>
+    </nav>
+    <section class="dashboard" aria-labelledby="dashboard-title">
+        <div class="section-heading">
+            <div>
+                <div class="eyebrow">நேரடி பயன்பாட்டு நிலை</div>
+                <h2 id="dashboard-title">நிலை முகப்புப் பலகை</h2>
+            </div>
+            <p class="foot">புதுப்பிக்கப்பட்டது: {{dashboard.checked_at_local.strftime('%d-%m-%Y %H:%M')}}</p>
+        </div>
+        <div class="status-grid">
+            <article class="status-card">
+                <span class="status-label">செயலில் உள்ள இடம்</span>
+                <h3>{{dashboard.location_name}}</h3>
+                <p>{{'%.6f'|format(dashboard.latitude)}}, {{'%.6f'|format(dashboard.longitude)}}</p>
+                <p class="foot">{{dashboard.timezone_name}}</p>
+                <span class="pill {{'pill-ok' if dashboard.location_record else 'pill-warning'}}">
+                    {{'தரவுத்தளத்தில் செயலில் உள்ளது' if dashboard.location_record else 'அமைப்பில் மட்டும் உள்ளது'}}
+                </span>
+            </article>
+            <article class="status-card">
+                <span class="status-label">கருவோட்டக் காலம்</span>
+                <h3>{{dashboard.window.window.season_name_tamil}} {{dashboard.window.window.season_year}}</h3>
+                <p>{{dashboard.window.window.start_datetime_local.strftime('%d-%m-%Y %H:%M')}} →<br>
+                    {{dashboard.window.window.end_datetime_local.strftime('%d-%m-%Y %H:%M')}}</p>
+                <span class="pill {{'pill-ok' if dashboard.window.state == 'active' else 'pill-info'}}">
+                    {{dashboard.window.state_tamil}}
+                </span>
+            </article>
+            <article class="status-card">
+                <span class="status-label">சமீபத்திய வானிலைத் தரவு</span>
+                {% if dashboard.latest_observation %}
+                    <h3>{{dashboard.latest_observation.observed_at_local|dashboard_datetime}}</h3>
+                    <p>{{dashboard.latest_observation.source}}</p>
+                    <span class="pill {{'pill-ok' if dashboard.latest_observation.quality_flag in ('valid', 'verified', 'calculated') else 'pill-warning'}}">
+                        தரம்: {{dashboard.latest_observation.quality_flag|quality_tamil}}
+                    </span>
+                {% else %}
+                    <h3>தரவு இல்லை</h3>
+                    <p>வானிலைப் பதிவுக்காகக் காத்திருக்கிறது.</p>
+                    <span class="pill pill-warning">தர நிலை கிடைக்கவில்லை</span>
+                {% endif %}
+            </article>
+            <article class="status-card">
+                <span class="status-label">கடைசி முன்னறிவிப்பு</span>
+                {% if dashboard.latest_forecast %}
+                    <h3>{{'ஆடி' if dashboard.latest_forecast.season_type == 'aadi' else 'மார்கழி'}} {{dashboard.latest_forecast.season_year}}</h3>
+                    <p>{{dashboard.latest_forecast.prediction_start}} → {{dashboard.latest_forecast.prediction_end}}</p>
+                    <p class="foot">உருவாக்கம்: {{(dashboard.latest_forecast.generated_at or dashboard.latest_forecast.created_at)|dashboard_datetime}}</p>
+                    <span class="pill {{'pill-ok' if dashboard.latest_forecast.status == 'validated' else 'pill-warning'}}">
+                        {{'சரிபார்க்கப்பட்டது' if dashboard.latest_forecast.status == 'validated' else 'ஆராய்ச்சி நிலை'}}
+                    </span>
+                {% else %}
+                    <h3>முன்னறிவிப்பு இல்லை</h3>
+                    <p>முதல் முன்னறிவிப்பு ஓட்டத்திற்காகக் காத்திருக்கிறது.</p>
+                    <span class="pill pill-warning">உருவாக்கப்படவில்லை</span>
+                {% endif %}
+            </article>
+        </div>
+        <aside class="warnings" aria-label="முக்கிய எச்சரிக்கைகள்" aria-live="polite">
+            <h3>முக்கிய எச்சரிக்கைகள்</h3>
+            {% if dashboard.warnings %}
+                <ul>
+                {% for warning in dashboard.warnings %}<li>{{warning}}</li>{% endfor %}
+                </ul>
+            {% else %}
+                <p>உடனடி நடவடிக்கை தேவைப்படும் எச்சரிக்கை இல்லை.</p>
+            {% endif %}
+        </aside>
+    </section>
     <section class="grid mb-25">
         <article class="card"><span class="tag">ஆடி கருவோட்டம்</span>
             <h2>18 நாட்கள்</h2>

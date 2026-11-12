@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>கருவோட்டக் காலண்டர்</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap" id="main-content" tabindex="-1">
+    <a class="back" href="/?year={{selected_year}}">← முதற்பக்கம்</a>
+    <header class="calendar-header">
+        <div>
+            <div class="eyebrow">விதி மற்றும் மூலத்துடன்</div>
+            <h1>கருவோட்டக் காலண்டர்</h1>
+            <p>{{selected_year}} ஆண்டிற்கான ஆடி மற்றும் மார்கழி கண்காணிப்புச் சாளரங்கள்</p>
+        </div>
+        <form action="/calendar" method="get" aria-label="காலண்டர் ஆண்டு தேர்வு">
+            <label for="calendar-year">ஆண்டு</label>
+                <input id="calendar-year" name="year" type="number" value="{{selected_year}}" min="2015" max="2100">
+            <button type="submit">காட்டு</button>
+        </form>
+    </header>
+
+    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
+
+    {% if calendar.persistence_warning %}
+        <section class="warnings" role="status"><p>{{calendar.persistence_warning}}</p></section>
+    {% endif %}
+
+    <section class="calendar-grid" aria-label="கருவோட்டச் சாளரங்கள்">
+        {% for item in calendar.windows %}
+            {% set window = item.window %}
+            {% set event = window.trigger_event %}
+            <article class="calendar-card calendar-card-{{window.season_type}}">
+                <div class="calendar-card-title">
+                    <div>
+                        <span class="tag">{{window.season_name_tamil}} கருவோட்டம்</span>
+                        <h2>{{window.duration_hours // 24}} முழு நாட்கள்</h2>
+                    </div>
+                    <span class="phase phase-{{event.event_type}}">{{event.event_type_tamil}}</span>
+                </div>
+
+                <dl class="trace-list">
+                    <div><dt>தமிழ் மாதத் தொடக்கம்</dt><dd>{{item.tamil_month_start.strftime('%d-%m-%Y')}} 00:00</dd></div>
+                    <div><dt>தேர்ந்தெடுத்த சந்திர நிகழ்வு</dt><dd>{{event.event_type_tamil}}</dd></div>
+                    <div><dt>நிகழ்வு — உள்ளூர் நேரம்</dt><dd>{{event.event_datetime_local.strftime('%d-%m-%Y %H:%M:%S %Z')}}</dd></div>
+                    <div><dt>நிகழ்வு — UTC</dt><dd>{{event.event_datetime_utc.strftime('%d-%m-%Y %H:%M:%S UTC')}}</dd></div>
+                    <div class="trace-highlight"><dt>சாளரத் தொடக்கம் — சேர்க்கப்படும்</dt><dd>{{window.start_datetime_local.strftime('%d-%m-%Y %H:%M:%S')}}</dd></div>
+                    <div class="trace-highlight"><dt>சாளர முடிவு — சேர்க்கப்படாது</dt><dd>{{window.end_datetime_local.strftime('%d-%m-%Y %H:%M:%S')}}</dd></div>
+                    <div><dt>சரியான கால அளவு</dt><dd>{{window.duration_hours}} மணி</dd></div>
+                    <div><dt>கணக்கீட்டு மூலம்</dt><dd>{{event.source}} {{event.calculation_version}}</dd></div>
+                    <div><dt>விதி / தர நிலை</dt><dd>{{window.rule_version}} · {{event.quality_flag|quality_tamil}}</dd></div>
+                </dl>
+
+                <p class="persistence-state {{'stored' if item.persisted else 'calculated-only'}}">
+                    {{item.persistence_state_tamil}}
+                </p>
+            </article>
+        {% endfor %}
+    </section>
+
+    <section class="card mb-25">
+        <div class="eyebrow">மார்கழி அமாவாசை / பௌர்ணமி மாற்றம்</div>
+        <h2>ஆண்டுதோறும் மாறும் தேர்வு</h2>
+        <div class="alternation" aria-label="மார்கழி மாற்று வரிசை">
+            {% for item in calendar.alternation %}
+                <div class="alternation-item {{'selected' if item.selected else ''}}" {% if item.selected %}aria-current="date"{% endif %}>
+                    <b>{{item.year}}</b>
+                    <span>{{item.event_type_tamil}}</span>
+                    {% if item.selected %}<span class="sr-only">தேர்ந்தெடுக்கப்பட்ட ஆண்டு</span>{% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        <p class="foot">மீளுருவாக்க anchor: {{calendar.anchor_year}} = {{calendar.anchor_phase_tamil}}.
+            தேர்ந்தெடுத்த ஆண்டு தனிப்படுத்திக் காட்டப்பட்டுள்ளது.</p>
+    </section>
+
+    <section class="card rule-details" id="rule-details">
+        <div class="eyebrow">கணக்கீட்டு விதி</div>
+        <h2>இந்தச் சாளரங்கள் எவ்வாறு கணக்கிடப்படுகின்றன?</h2>
+        <ol>
+            <li><b>திட்ட நாட்காட்டி:</b> {{calendar.calendar_reference}} = சித்திரை 1;
+                விதிப் பதிப்பு {{calendar.calendar_rule_version}}. இது அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல.</li>
+            <li><b>ஆடி:</b> ஆடி 1 தொடங்கிய பின் முதலில் வரும் அமாவாசை அல்லது பௌர்ணமியின்
+                துல்லிய நேரத்தில் தொடங்கி 432 மணி நேரம் தொடரும்.</li>
+            <li><b>மார்கழி:</b> anchor அடிப்படையில் அந்த ஆண்டிற்கு ஒதுக்கப்பட்ட அமாவாசை அல்லது
+                பௌர்ணமியின் துல்லிய நேரத்தில் தொடங்கி இரவு/பகல் இடைவிடாமல் 264 மணி நேரம் தொடரும்.</li>
+            <li><b>நேர எல்லை:</b> தொடக்கம் சேர்க்கப்படும்; முடிவு சேர்க்கப்படாது —
+                <code>[தொடக்கம், முடிவு)</code>.</li>
+        </ol>
+        <p class="foot">சதுர்த்தசி offset, நான்கு நாள் நிலைபெறுதல், சூரிய உதய மாற்றம் அல்லது midnight fallback
+            செயலில் உள்ள v2 விதியில் பயன்படுத்தப்படவில்லை.</p>
+    </section>
+</main>
+</body>
+</html>

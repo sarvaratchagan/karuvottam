@@ -24,6 +24,11 @@ def test_default_settings_match_project_plan():
     assert settings.weather_retry_backoff_seconds == 1
     assert settings.weather_raw_data_dir == PROJECT_ROOT / 'data/imports/weather/raw'
     assert settings.database_path == PROJECT_ROOT / 'data/karuvottam.sqlite3'
+    assert settings.log_path == PROJECT_ROOT / 'data/logs/karuvottam.log'
+    assert settings.log_level == 'INFO'
+    assert settings.admin_username is None
+    assert settings.admin_password is None
+    assert settings.max_request_bytes == 1048576
     assert settings.port == 5000
 
 
@@ -48,6 +53,11 @@ def test_environment_overrides_are_applied():
             'KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS': '0.25',
             'KARUVOTTAM_WEATHER_RAW_DATA_DIR': 'data/test-weather',
             'KARUVOTTAM_DATABASE_PATH': 'data/test.sqlite3',
+            'KARUVOTTAM_LOG_PATH': 'data/test.log',
+            'KARUVOTTAM_LOG_LEVEL': 'warning',
+            'KARUVOTTAM_ADMIN_USERNAME': 'test-admin',
+            'KARUVOTTAM_ADMIN_PASSWORD': 'long-test-password',
+            'KARUVOTTAM_MAX_REQUEST_BYTES': '2097152',
             'KARUVOTTAM_PORT': '5050',
         }
     )
@@ -70,6 +80,11 @@ def test_environment_overrides_are_applied():
     assert settings.weather_retry_backoff_seconds == 0.25
     assert settings.weather_raw_data_dir == PROJECT_ROOT / 'data/test-weather'
     assert settings.database_path == PROJECT_ROOT / 'data/test.sqlite3'
+    assert settings.log_path == PROJECT_ROOT / 'data/test.log'
+    assert settings.log_level == 'WARNING'
+    assert settings.admin_username == 'test-admin'
+    assert settings.admin_password == 'long-test-password'
+    assert settings.max_request_bytes == 2097152
     assert settings.port == 5050
 
 
@@ -83,6 +98,11 @@ def test_environment_overrides_are_applied():
         ('KARUVOTTAM_TIMEZONE', 'Not/A_Zone', 'is not available'),
         ('KARUVOTTAM_CHITHIRAI_REFERENCE', 'March-21', 'must use MM-DD'),
         ('KARUVOTTAM_DATABASE_PATH', '', 'must not be blank'),
+        ('KARUVOTTAM_LOG_PATH', '', 'must not be blank'),
+        ('KARUVOTTAM_LOG_LEVEL', 'verbose', 'must be DEBUG'),
+        ('KARUVOTTAM_ADMIN_USERNAME', 'admin', 'configured together'),
+        ('KARUVOTTAM_ADMIN_PASSWORD', 'long-enough-password', 'configured together'),
+        ('KARUVOTTAM_MAX_REQUEST_BYTES', '999', 'between 1024'),
         ('KARUVOTTAM_WEATHER_TIMEOUT_SECONDS', '0', 'greater than zero'),
         ('KARUVOTTAM_WEATHER_RETRY_ATTEMPTS', '0', 'at least 1'),
         ('KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS', '-1', 'must not be negative'),
@@ -105,3 +125,34 @@ def test_blank_api_key_is_not_treated_as_a_secret():
     settings = Settings.from_env({'KARUVOTTAM_WEATHER_API_KEY': ''})
 
     assert settings.weather_api_key is None
+
+
+@pytest.mark.parametrize(
+    ('username', 'password', 'message'),
+    [
+        ('bad user', 'long-enough-password', 'must use 1-64 ASCII'),
+        ('admin', 'short', 'must be 16-256 bytes'),
+        ('admin', 'x' * 257, 'must be 16-256 bytes'),
+    ],
+)
+def test_invalid_admin_credentials_fail_configuration(username, password, message):
+    with pytest.raises(ConfigurationError, match=message):
+        Settings.from_env(
+            {
+                'KARUVOTTAM_ADMIN_USERNAME': username,
+                'KARUVOTTAM_ADMIN_PASSWORD': password,
+            }
+        )
+
+
+def test_settings_repr_never_contains_configured_secrets():
+    settings = Settings.from_env(
+        {
+            'KARUVOTTAM_WEATHER_API_KEY': 'private-weather-key',
+            'KARUVOTTAM_ADMIN_USERNAME': 'admin',
+            'KARUVOTTAM_ADMIN_PASSWORD': 'private-admin-password',
+        }
+    )
+
+    assert 'private-weather-key' not in repr(settings)
+    assert 'private-admin-password' not in repr(settings)

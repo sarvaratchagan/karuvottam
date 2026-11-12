@@ -34,8 +34,8 @@ def test_initial_migration_creates_every_planned_table(tmp_path):
 
     result = migrate_database(database_path)
 
-    assert result.applied_versions == (1, 2)
-    assert result.current_version == 2
+    assert result.applied_versions == (1, 2, 3)
+    assert result.current_version == 3
     with connect_database(database_path) as connection:
         tables = {
             row['name']
@@ -55,6 +55,11 @@ def test_initial_migration_creates_every_planned_table(tmp_path):
         {
             'version': 2,
             'name': 'weather_time_intervals',
+            'checksum_length': 64,
+        },
+        {
+            'version': 3,
+            'name': 'prediction_traceability',
             'checksum_length': 64,
         },
     ]
@@ -79,7 +84,7 @@ def test_migration_is_idempotent_and_data_survives_reopen(tmp_path):
         stored_name = connection.execute('SELECT name FROM locations').fetchone()['name']
 
     assert second_result.applied_versions == ()
-    assert second_result.current_version == 2
+    assert second_result.current_version == 3
     assert stored_name == 'Test location'
 
 
@@ -97,6 +102,36 @@ def test_weather_interval_migration_adds_columns(tmp_path):
         'precipitation_interval_end_utc',
         'precipitation_interval_minutes',
     } <= columns
+
+
+def test_prediction_traceability_migration_adds_columns(tmp_path):
+    database_path = tmp_path / 'karuvottam.sqlite3'
+    migrate_database(database_path)
+
+    with connect_database(database_path) as connection:
+        run_columns = {
+            row['name']
+            for row in connection.execute('PRAGMA table_info(prediction_runs)')
+        }
+        prediction_columns = {
+            row['name']
+            for row in connection.execute('PRAGMA table_info(predictions)')
+        }
+
+    assert {
+        'source_window_key',
+        'mapping_basis_end_local',
+        'score_model_version',
+        'category_threshold_version',
+        'quality_flag',
+        'generated_at',
+    } <= run_columns
+    assert {
+        'status',
+        'research_score',
+        'quality_flag',
+        'reason_codes',
+    } <= prediction_columns
 
 
 def test_weather_interval_migration_backfills_existing_era5_rows(tmp_path):

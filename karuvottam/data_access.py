@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -127,6 +128,43 @@ class WeatherObservationRecord:
     precipitation_interval_minutes: int | None
 
 
+@dataclass(frozen=True)
+class PredictionRunRecord:
+    id: int
+    season_type: str
+    season_year: int
+    prediction_start: str
+    prediction_end: str
+    input_window_id: int | None
+    rule_version: str
+    model_version: str
+    status: str
+    source_window_key: str | None
+    mapping_basis_end_local: str | None
+    score_model_version: str | None
+    category_threshold_version: str | None
+    quality_flag: str | None
+    generated_at: str | None
+    created_at: str
+
+
+@dataclass(frozen=True)
+class PredictionRecord:
+    id: int
+    prediction_run_id: int
+    target_datetime_local: str
+    rain_probability_pct: float | None
+    predicted_rain_mm: float | None
+    rain_category: str | None
+    prediction_method: str
+    model_version: str
+    generated_at: str
+    status: str
+    research_score: float | None
+    quality_flag: str | None
+    reason_codes: tuple[str, ...]
+
+
 def _aware_iso(value: datetime, field_name: str) -> str:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f'{field_name} must be timezone-aware')
@@ -214,6 +252,45 @@ def _weather_observation_from_row(row: sqlite3.Row) -> WeatherObservationRecord:
         ],
         precipitation_interval_end_utc=row['precipitation_interval_end_utc'],
         precipitation_interval_minutes=row['precipitation_interval_minutes'],
+    )
+
+
+def _prediction_run_from_row(row: sqlite3.Row) -> PredictionRunRecord:
+    return PredictionRunRecord(
+        id=row['id'],
+        season_type=row['season_type'],
+        season_year=row['season_year'],
+        prediction_start=row['prediction_start'],
+        prediction_end=row['prediction_end'],
+        input_window_id=row['input_window_id'],
+        rule_version=row['rule_version'],
+        model_version=row['model_version'],
+        status=row['status'],
+        source_window_key=row['source_window_key'],
+        mapping_basis_end_local=row['mapping_basis_end_local'],
+        score_model_version=row['score_model_version'],
+        category_threshold_version=row['category_threshold_version'],
+        quality_flag=row['quality_flag'],
+        generated_at=row['generated_at'],
+        created_at=row['created_at'],
+    )
+
+
+def _prediction_from_row(row: sqlite3.Row) -> PredictionRecord:
+    return PredictionRecord(
+        id=row['id'],
+        prediction_run_id=row['prediction_run_id'],
+        target_datetime_local=row['target_datetime_local'],
+        rain_probability_pct=row['rain_probability_pct'],
+        predicted_rain_mm=row['predicted_rain_mm'],
+        rain_category=row['rain_category'],
+        prediction_method=row['prediction_method'],
+        model_version=row['model_version'],
+        generated_at=row['generated_at'],
+        status=row['status'],
+        research_score=row['research_score'],
+        quality_flag=row['quality_flag'],
+        reason_codes=tuple(json.loads(row['reason_codes'] or '[]')),
     )
 
 
@@ -511,6 +588,51 @@ class WeatherObservationRepository:
         ).fetchone()
         return None if row is None else _weather_observation_from_row(row)
 
+    def latest_for_location(
+        self,
+        location_id: int,
+        *,
+        source: str | None = None,
+    ) -> WeatherObservationRecord | None:
+        """Return the newest stored observation for one location."""
+        if location_id < 1:
+            raise ValueError('location_id must be positive')
+        if source is None:
+            row = self._connection.execute(
+                """
+                SELECT * FROM weather_observations
+                WHERE location_id = ?
+                ORDER BY observed_at_utc DESC, id DESC
+                LIMIT 1
+                """,
+                (location_id,),
+            ).fetchone()
+        else:
+            row = self._connection.execute(
+                """
+                SELECT * FROM weather_observations
+                WHERE location_id = ? AND source = ?
+                ORDER BY observed_at_utc DESC, id DESC
+                LIMIT 1
+                """,
+                (location_id, source),
+            ).fetchone()
+        return None if row is None else _weather_observation_from_row(row)
+
+    def list_sources_for_location(self, location_id: int) -> tuple[str, ...]:
+        """Return distinct observation sources available for one location."""
+        if location_id < 1:
+            raise ValueError('location_id must be positive')
+        rows = self._connection.execute(
+            """
+            SELECT DISTINCT source FROM weather_observations
+            WHERE location_id = ?
+            ORDER BY source
+            """,
+            (location_id,),
+        ).fetchall()
+        return tuple(row['source'] for row in rows)
+
     def list_between(
         self,
         location_id: int,
@@ -545,6 +667,112 @@ class WeatherObservationRepository:
         return tuple(_weather_observation_from_row(row) for row in rows)
 
 
+class ForecastRepository:
+    """Persist complete timeline runs and their daily outputs atomically."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def add_timeline(
+        self,
+        timeline,
+        *,
+        input_window_id: int,
+    ) -> PredictionRunRecord:
+        if input_window_id < 1:
+            raise ValueError('input_window_id must be positive')
+        cursor = self._connection.execute(
+            """
+            INSERT INTO prediction_runs (
+                season_type, season_year, prediction_start, prediction_end,
+                input_window_id, rule_version, model_version, status,
+                source_window_key, mapping_basis_end_local, score_model_version,
+                category_threshold_version, quality_flag, generated_at, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                timeline.season_type,
+                timeline.season_year,
+                timeline.prediction_start.isoformat(),
+                timeline.prediction_end.isoformat(),
+                input_window_id,
+                timeline.rule_version,
+                timeline.timeline_model_version,
+                timeline.status,
+                timeline.source_window_key,
+                _aware_iso(
+                    timeline.mapping_basis_end_local,
+                    'mapping_basis_end_local',
+                ),
+                timeline.score_model_version,
+                timeline.category_threshold_version,
+                timeline.quality_flag,
+                _aware_iso(timeline.generated_at, 'generated_at'),
+                'Experimental research index; not a calibrated probability.',
+            ),
+        )
+        run_id = cursor.lastrowid
+        self._connection.executemany(
+            """
+            INSERT INTO predictions (
+                prediction_run_id, target_datetime_local,
+                rain_probability_pct, predicted_rain_mm, rain_category,
+                data_quality_score, prediction_method, model_version,
+                generated_at, status, research_score, quality_flag,
+                reason_codes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                (
+                    run_id,
+                    _aware_iso(entry.target_datetime_local, 'target_datetime_local'),
+                    entry.rain_probability_pct,
+                    entry.predicted_rain_mm,
+                    entry.rain_category,
+                    None,
+                    entry.prediction_method,
+                    entry.timeline_model_version,
+                    _aware_iso(entry.generated_at, 'generated_at'),
+                    entry.status,
+                    entry.research_score,
+                    entry.quality_flag,
+                    json.dumps(entry.reason_codes, separators=(',', ':')),
+                )
+                for entry in timeline.entries
+            ),
+        )
+        return _created(self.get_run(run_id))
+
+    def get_run(self, run_id: int) -> PredictionRunRecord | None:
+        row = self._connection.execute(
+            'SELECT * FROM prediction_runs WHERE id = ?',
+            (run_id,),
+        ).fetchone()
+        return None if row is None else _prediction_run_from_row(row)
+
+    def latest_run(self) -> PredictionRunRecord | None:
+        """Return the most recently generated forecast run."""
+        row = self._connection.execute(
+            """
+            SELECT * FROM prediction_runs
+            ORDER BY COALESCE(generated_at, created_at) DESC, id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        return None if row is None else _prediction_run_from_row(row)
+
+    def list_entries(self, run_id: int) -> tuple[PredictionRecord, ...]:
+        rows = self._connection.execute(
+            """
+            SELECT * FROM predictions
+            WHERE prediction_run_id = ?
+            ORDER BY target_datetime_local, id
+            """,
+            (run_id,),
+        ).fetchall()
+        return tuple(_prediction_from_row(row) for row in rows)
+
+
 class UnitOfWork:
     """Repositories sharing one SQLite transaction."""
 
@@ -554,6 +782,7 @@ class UnitOfWork:
         self.lunar_events = LunarEventRepository(connection)
         self.karuvottam_windows = KaruvottamWindowRepository(connection)
         self.weather_observations = WeatherObservationRepository(connection)
+        self.forecasts = ForecastRepository(connection)
 
 
 def _translate_integrity_error(error: sqlite3.IntegrityError) -> DataAccessError:

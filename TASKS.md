@@ -62,37 +62,37 @@ Derived from `PROJECT_PLAN.md` (version 1.2).
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T4.1 | Define and implement deterministic research scoring rules | P2 | T1.5, T2.4 | Todo | Unassigned | Inputs, rationale, thresholds, output, and limitations are documented; identical input gives identical output; the score is not presented as probability |
-| T4.2 | Define rain categories | P2 | T4.1 | Todo | Unassigned | No-rain, drizzle, moderate, and heavy thresholds specify amount and interval; boundary-value tests pass |
-| T4.3 | Generate 180/140-day experimental forecast timelines | P2 | T1.1, T1.5, T3.2, T4.1, T4.2 | Todo | Unassigned | Target timestamps are correct; every output links to its source window, rule/model version, generation time, and quality; missing inputs produce “no data,” not invented values |
-| T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | Todo | Unassigned | Time-ordered training/evaluation produces documented Brier/reliability results; percentages remain hidden until sufficient calibration evidence exists |
+| T4.1 | Define and implement deterministic research scoring rules | P2 | T1.5, T2.4 | Done | Unassigned | Inputs, rationale, thresholds, output, and limitations are documented; identical input gives identical output; the score is not presented as probability |
+| T4.2 | Define rain categories | P2 | T4.1 | Done | Unassigned | No-rain, drizzle, moderate, and heavy thresholds specify amount and interval; boundary-value tests pass |
+| T4.3 | Generate 180/140-day experimental forecast timelines | P2 | T1.1, T1.5, T3.2, T4.1, T4.2 | Done | Unassigned | Target timestamps are correct; every output links to its source window, rule/model version, generation time, and quality; missing inputs produce “no data,” not invented values |
+| T4.4 | Calibrate probability output | P3 | T4.3, T6.1, T6.3, T6.4 | In Progress | Unassigned | Calibration engine and gate exist; T6.1–T6.4 evidence does not establish incremental value and the score-calibration gate has not passed, so percentages remain hidden |
 
 ## Phase 5 — Deliver the Tamil web interface
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T5.1 | Build the Tamil status dashboard | P2 | T2.4, T3.2, T4.3 | Todo | Unassigned | Active location, next window, latest data, quality status, latest forecast, and actionable warnings appear on one page |
-| T5.2 | Build the Karuvottam calendar view | P2 | T1.5, T3.2 | Todo | Unassigned | Aadi/Margazhi windows, selected lunar phase, alternation rule, start/end, and rule details are visible and traceable |
-| T5.3 | Build the rain-forecast calendar | P2 | T4.3, T2.5 | Todo | Unassigned | Day/week/month views show category, available probability, quality, method, experimental/no-data state, and CSV export; layout works on small screens |
-| T5.4 | Build the observation-data inspection page | P2 | T2.4, T3.2 | Todo | Unassigned | Time-series views cover required variables; raw/interpolated observations and missing intervals are visually distinct |
-| T5.5 | Add UI acceptance and accessibility checks | P2 | T5.1, T5.2, T5.3, T5.4 | Todo | Unassigned | Tamil renders correctly; invalid input and no-data states are understandable; key pages work on desktop/mobile and do not return unexplained 500 errors |
+| T5.1 | Build the Tamil status dashboard | P2 | T2.4, T3.2, T4.3 | Done | Unassigned | Active location, next window, latest data, quality status, latest forecast, and actionable warnings appear on one page |
+| T5.2 | Build the Karuvottam calendar view | P2 | T1.5, T3.2 | Done | Unassigned | Aadi/Margazhi windows, selected lunar phase, alternation rule, start/end, and rule details are visible and traceable |
+| T5.3 | Build the rain-forecast calendar | P2 | T4.3, T2.5 | Done | Unassigned | Day/week/month views show category, available probability, quality, method, experimental/no-data state, and CSV export; layout works on small screens |
+| T5.4 | Build the observation-data inspection page | P2 | T2.4, T3.2 | Done | Unassigned | Time-series views cover required variables; raw/interpolated observations and missing intervals are visually distinct |
+| T5.5 | Add UI acceptance and accessibility checks | P2 | T5.1, T5.2, T5.3, T5.4 | Done | Unassigned | Tamil renders correctly; invalid input and no-data states are understandable; key pages work on desktop/mobile and do not return unexplained 500 errors |
 
 ## Phase 6 — Backtest and scientifically evaluate
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T6.1 | Assemble a reproducible multi-year dataset | P2 | T1.5, T2.4, T3.2 | Todo | Unassigned | Historical windows and subsequent observed rainfall are linked; provider, gaps, transformations, and measurement differences are documented |
-| T6.2 | Implement baseline comparisons | P2 | T6.1, T4.3 | Todo | Unassigned | Karuvottam-only, seasonal/climatology baseline, and combined-feature approaches run over the same evaluation periods |
-| T6.3 | Implement evaluation metrics and reports | P2 | T6.2 | Todo | Unassigned | Appropriate classification, probability, and amount metrics are reported by season, month, and forecast horizon with limitations |
-| T6.4 | Implement time-series validation and versioning | P2 | T6.2, T6.3 | Todo | Unassigned | Past years train/configure rules and later years test them; leakage checks pass; dataset, rule, and model versions make results reproducible |
-| T6.5 | Publish a research findings summary | P2 | T6.4 | Todo | Unassigned | The summary states whether Karuvottam adds value over baseline, includes uncertainty, and avoids unsupported accuracy claims |
+| T6.1 | Assemble a reproducible multi-year dataset | P2 | T1.5, T2.4, T3.2 | Done | Unassigned | Historical windows and subsequent observed rainfall are linked; provider, gaps, transformations, and measurement differences are documented |
+| T6.2 | Implement baseline comparisons | P2 | T6.1, T4.3 | Done | Unassigned | Karuvottam-only, seasonal/climatology baseline, and combined-feature approaches run over the same evaluation periods |
+| T6.3 | Implement evaluation metrics and reports | P2 | T6.2 | Done | Unassigned | Appropriate classification, probability, and amount metrics are reported by season, month, and forecast horizon with limitations |
+| T6.4 | Implement time-series validation and versioning | P2 | T6.2, T6.3 | Done | Unassigned | Past years train/configure rules and later years test them; leakage checks pass; dataset, rule, and model versions make results reproducible |
+| T6.5 | Publish a research findings summary | P2 | T6.4 | Done | Unassigned | The summary states whether Karuvottam adds value over baseline, includes uncertainty, and avoids unsupported accuracy claims |
 
 ## Phase 7 — Secure, recover, and deploy
 
 | ID | Task | Priority | Depends on | Status | Owner | Done when |
 |---|---|---:|---|---|---|---|
-| T7.1 | Harden error handling and logging | P3 | M3 | Todo | Unassigned | Users see safe, understandable errors; diagnostic logs omit secrets; API/database recovery behavior is documented and tested |
-| T7.2 | Add administration security | P3 | T7.1 | Todo | Unassigned | Admin routes require authentication; inputs are validated; secrets stay in environment variables; debug is off; dependencies are reviewed |
+| T7.1 | Harden error handling and logging | P3 | M3 | Done | Unassigned | Users see safe, understandable errors; diagnostic logs omit secrets; API/database recovery behavior is documented and tested |
+| T7.2 | Add administration security | P3 | T7.1 | Done | Unassigned | Admin routes require authentication; inputs are validated; secrets stay in environment variables; debug is off; dependencies are reviewed |
 | T7.3 | Implement backup and recovery | P3 | T3.1, T2.5 | Todo | Unassigned | Scheduled database backups and CSV recovery paths exist; a restore test succeeds; the recovery procedure is documented |
 | T7.4 | Prepare production deployment | P3 | T7.1, T7.2, T7.3, T6.5 | Todo | Unassigned | WSGI, HTTPS, environment configuration, logs, health monitoring, and the pre-release checklist are verified |
 | T7.5 | Add audit history for manual changes and forecast runs | P3 | T3.2, T5.1 | Todo | Unassigned | Actor, action, record, reason, and timestamp are captured for manual edits and prediction-generation history |

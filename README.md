@@ -5,10 +5,19 @@
 - ஆடி 18 நாள் → மார்கழி கருவோட்டம் முடிந்த மறுநாள் → 180 நாள் பொருத்தம்
 - மார்கழி 11 நாள் (இரவு/பகல் தொடர்ச்சி) → அடுத்த ஆண்டு ஆடி கருவோட்டம் முடிந்த மறுநாள் → 140 நாள் பொருத்தம்
 - 180/140 நாள் முன்னறிவிப்பு அட்டவணை UI
-- தமிழ்-first இடைமுகம்
+- சேமிக்கப்பட்ட source-window ERA5 தரவிலிருந்து உருவாகும் experimental research score
+- இடம், அடுத்த சாளரம், சமீபத்திய தரவு/முன்னறிவிப்பு மற்றும் எச்சரிக்கைகளைக் காட்டும் தமிழ் நிலை முகப்புப் பலகை
+- சந்திர நிகழ்வு provenance மற்றும் மார்கழி alternation உடன் தனி கருவோட்டக் காலண்டர்
+- நாள்/வாரம்/மாதம் மற்றும் CSV ஏற்றுமதியுடன் evidence-safe மழை முன்னறிவிப்பு நாட்காட்டி
+- raw/interpolated வேறுபாடு மற்றும் gaps உடன் வானிலை time-series ஆய்வுப் பக்கம்
+- ஒரே holdout காலத்தில் seasonal, Karuvottam-only மற்றும் combined baseline predictions
+- classification, reliability மற்றும் rainfall-error metrics உடன் reproducible T6.3 அறிக்கைகள்
+- per-window as-of cutoffs உடன் expanding rolling-origin T6.4 validation
+- paired source-window bootstrap uncertainty உடன் evidence-scoped T6.5 findings summary
+- keyboard, screen-size மற்றும் semantic accessibility checks உடன் தமிழ்-first இடைமுகம்
 
 ## முக்கிய வரம்பு
-கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. வானிலை client மற்றும் ingestion உள்ளன; முகப்பிலுள்ள முன்னறிவிப்பு மதிப்புகள் இன்னும் விளக்க மதிப்புகள், அளவீடு செய்யப்பட்ட நிகழ்தகவுகள் அல்ல.
+கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. 180/140 நாள் பக்கங்கள் தேர்ந்தெடுக்கப்பட்ட ஆண்டின் ஆடி/மார்கழி source window-க்கான சேமிக்கப்பட்ட `open-meteo:era5` hourly observations-ஐ வாசித்து experimental research score உருவாக்குகின்றன. 2015–2024 source windows உள்ளூர் reference database-ல் முழுமையாக உள்ளன. T6.3 fixed holdout, T6.4 rolling validation மற்றும் T6.5 paired uncertainty முடிவுகள் இந்த இடம்/தரவு/காலத்தில் Karuvottam-only/combined models seasonal climatology-ஐவிட கூடுதல் predictive value தருவதாக ஆதரிக்கவில்லை. இது மரபின் பொதுவான மறுப்பு அல்ல. Research score எதிர்கால தினசரி மழை அளவோ calibrated probability-யோ அல்ல; calibration publication gate கடக்காததால் probability/amount/rain category UI-ல் வெளியிடப்படாது.
 
 ஆடி 1 = சூன் 21. அதன்பின் முதலில் வரும் பௌர்ணமி அல்லது அமாவாசை நேரமே ஆடி தொடக்கம். மார்கழியில் அமாவாசை/பௌர்ணமி ஆண்டுதோறும் மாறி மாறி பயன்படுத்தப்படும்; இயல்புநிலை anchor `2026 = அமாவாசை`. மார்கழி கண்காணிப்பு 11 முழு நாட்கள்.
 
@@ -68,14 +77,34 @@ python app.py
 | `karuvottam/weather_client.py` | retry, raw archive மற்றும் idempotent ERA5 ingestion |
 | `karuvottam/weather_quality.py` | record மற்றும் window-level weather quality validation |
 | `karuvottam/weather_csv.py` | preview-first UTF-8 weather CSV import மற்றும் export |
+| `karuvottam/research_scoring.py` | probability அல்லாத deterministic 0–100 ஆய்வு மதிப்பெண் |
+| `karuvottam/rain_categories.py` | versioned 60 நிமிட மழை-அளவு வகைப்படுத்தல் |
+| `karuvottam/forecast_timeline.py` | traceable 180/140 நாள் experimental/no-data காலவரிசை |
+| `karuvottam/probability_calibration.py` | time-ordered Brier/reliability மதிப்பீடு மற்றும் probability publication gate |
+| `karuvottam/status_dashboard.py` | முகப்புப் பலகைக்கான location/window/latest-data/forecast நிலை read model |
+| `karuvottam/calendar_view.py` | traceable ஆடி/மார்கழி காலண்டர் read model மற்றும் persistence நிலை |
+| `karuvottam/forecast_calendar.py` | நாள்/வாரம்/மாத forecast read models மற்றும் traceable CSV export |
+| `karuvottam/forecast_inputs.py` | stored source-window weather rows, quality coverage மற்றும் experimental score இணைப்பு |
+| `karuvottam/observation_inspection.py` | stored weather time-series, coverage, interpolation மற்றும் gap read model |
+| `karuvottam/evaluation_dataset.py` | பல ஆண்டு ERA5 collection, source-window/observed-rainfall join மற்றும் reproducible CSV/manifest export |
+| `karuvottam/baseline_comparison.py` | leakage-aware seasonal, Karuvottam-only மற்றும் combined matched baseline predictions |
+| `karuvottam/evaluation_metrics.py` | classification, reliability, rainfall-amount மற்றும் grouped T6.3 evaluation reports |
+| `karuvottam/time_series_validation.py` | as-of cutoffs, expanding folds, leakage audits மற்றும் versioned T6.4 reports |
+| `karuvottam/research_findings.py` | checksum-verified evidence, paired bootstrap uncertainty மற்றும் T6.5 claim-safe summary |
+| `karuvottam/error_handling.py` | rotating file logs மற்றும் credential/secret redaction |
+| `karuvottam/security.py` | நிர்வாக Basic authentication மற்றும் bounded query validation |
 | `karuvottam/migrations/` | மாற்றக்கூடாத வரிசைப்படுத்தப்பட்ட schema migrations |
 | `docs/DATABASE.md` | schema, timestamp மற்றும் migration நடைமுறை |
 
 ## தற்போதைய வழித்தடங்கள்
 
 - `/` — ஆண்டு தேர்வு மற்றும் கருவோட்டச் சுழற்சி
+- `/calendar?year=2026` — சந்திர நிகழ்வு, alternation, நேர எல்லை மற்றும் விதியுடன் கருவோட்டக் காலண்டர்
 - `/prediction?year=2026&mode=aadi` — ஆடி அடிப்படையிலான 180 நாள் காட்சி
 - `/prediction?year=2026&mode=margazhi` — மார்கழி அடிப்படையிலான 140 நாள் காட்சி
+- `/prediction.csv?year=2026&mode=aadi` — தினசரி traceability fields உடன் UTF-8 forecast CSV
+- `/observations` — தேதி/source filters உடன் வானிலை நேரத் தொடர் மற்றும் gap ஆய்வு
+- `/admin` — environment credentials தேவைப்படும் பாதுகாக்கப்பட்ட நிர்வாக நிலைப் பக்கம்
 
 உற்பத்தி இயக்கத்தில் Flask development server பயன்படுத்தப்படக்கூடாது. தற்போதைய உள்ளூர் இயக்கம் `debug=False` உடன் மட்டுமே தொடங்குகிறது.
 
@@ -101,6 +130,11 @@ python app.py
 | `KARUVOTTAM_WEATHER_RETRY_BACKOFF_SECONDS` | exponential retry-ன் ஆரம்ப தாமதம் `1` விநாடி |
 | `KARUVOTTAM_WEATHER_RAW_DATA_DIR` | `data/imports/weather/raw` — exact provider responses |
 | `KARUVOTTAM_DATABASE_PATH` | `data/karuvottam.sqlite3` — SQLite கோப்பு பாதை |
+| `KARUVOTTAM_LOG_PATH` | `data/logs/karuvottam.log` — 2 MiB rotating diagnostic log |
+| `KARUVOTTAM_LOG_LEVEL` | `INFO` — `DEBUG/INFO/WARNING/ERROR/CRITICAL` |
+| `KARUVOTTAM_ADMIN_USERNAME` | விருப்ப நிர்வாகப் பயனர்; password உடன் மட்டும் அமைக்கவும் |
+| `KARUVOTTAM_ADMIN_PASSWORD` | குறைந்தது 16-byte environment-only ரகசியம்; default இல்லை |
+| `KARUVOTTAM_MAX_REQUEST_BYTES` | `1048576` — அதிகபட்ச request body அளவு |
 | `KARUVOTTAM_PORT` | `5000` |
 
 ## தரவுத்தளத்தை உருவாக்குதல் / புதுப்பித்தல்
@@ -109,6 +143,7 @@ python app.py
 python -m karuvottam.database migrate
 ```
 
+T4.3 prediction traceability columns-ஐ சேர்க்கவும் இந்தக் கட்டளையை இயக்க வேண்டும்.
 இந்த கட்டளையை மீண்டும் இயக்குவது பாதுகாப்பானது. விரிவான schema மற்றும் migration
 விதிகள் [docs/DATABASE.md](docs/DATABASE.md)-இல் உள்ளன. PostgreSQL server வெளியீட்டிற்கான
 திட்டமிட்ட மாற்றுப் பாதையும் அதில் பதிவு செய்யப்பட்டுள்ளது.
@@ -124,7 +159,9 @@ pytest
 இந்தச் சோதனைகள் பயன்பாட்டு import, முக்கியப் பக்கங்கள், தவறான ஆண்டு fallback மற்றும் பதிவு,
 18 நாள் / 264 மணி நேரச் சாளரங்கள், ஆண்டுதோறும் மாறும் மார்கழி சந்திர கட்டம், 180 / 140 நாள் கால இணைப்பு, migration rollback,
 foreign keys, uniqueness மற்றும் restart-க்குப் பிந்தைய database persistence ஆகியவற்றைச்
-சரிபார்க்கின்றன.
+சரிபார்க்கின்றன. முக்கிய தமிழ் UI வழித்தடங்களின் semantic structure, labelled controls,
+table/SVG accessible names, தவறான உள்ளீடு, no-data fallback மற்றும் responsive CSS-ஐ
+`tests/test_ui_acceptance.py` சரிபார்க்கிறது.
 
 ## விதி விவரக்குறிப்புகள்
 
@@ -134,8 +171,23 @@ foreign keys, uniqueness மற்றும் restart-க்குப் பி
 - [பட்சம் மற்றும் திதிகள் — பழைய v1 குறிப்பு](docs/TITHI_RULE_SPEC.md)
 - [சூரிய உதயம்/நிலைபெறுதல் — பழைய v1 குறிப்பு](docs/SUNRISE_SPEC.md)
 - [கருவோட்டக் கண்காணிப்புக் காலச் சாளர விதி](docs/WINDOW_SPEC.md)
+- [கருவோட்டக் காலண்டர் காட்சி](docs/CALENDAR_VIEW.md)
 - [வரலாற்று வானிலைத் தரவு வழங்குநர் மதிப்பீடு](docs/WEATHER_PROVIDER_EVALUATION.md)
 - [ERA5 weather client மற்றும் ingestion நடைமுறை](docs/WEATHER_INGESTION.md)
 - [Weather timestamp மற்றும் precipitation interval விதிகள்](docs/WEATHER_TIME_SPEC.md)
 - [Weather data-quality validation விதிகள்](docs/WEATHER_QUALITY.md)
 - [Weather CSV import மற்றும் export ஒப்பந்தம்](docs/WEATHER_CSV.md)
+- [Deterministic Karuvottam research-index விதிகள்](docs/RESEARCH_SCORING_SPEC.md)
+- [முடிந்த 60 நிமிட மழை-அளவு வகைகள்](docs/RAIN_CATEGORY_SPEC.md)
+- [Traceable 180/140 நாள் experimental timeline](docs/FORECAST_TIMELINE_SPEC.md)
+- [Evidence-gated probability calibration](docs/PROBABILITY_CALIBRATION_SPEC.md)
+- [நாள்/வாரம்/மாதம் மழை முன்னறிவிப்பு நாட்காட்டி மற்றும் CSV](docs/FORECAST_CALENDAR.md)
+- [வானிலைத் தரவு time-series மற்றும் gap ஆய்வு](docs/OBSERVATION_INSPECTION.md)
+- [UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்](docs/UI_ACCEPTANCE.md)
+- [பல ஆண்டு reproducible மதிப்பீட்டுத் தரவுத்தொகுப்பு](docs/EVALUATION_DATASET.md)
+- [Seasonal / Karuvottam / combined அடிப்படை மாதிரி ஒப்பீடு](docs/BASELINE_COMPARISON.md)
+- [T6.3 மதிப்பீட்டு அளவீடுகள் மற்றும் reference முடிவுகள்](docs/EVALUATION_METRICS.md)
+- [T6.4 rolling-origin காலவரிசைச் சரிபார்ப்பு](docs/TIME_SERIES_VALIDATION.md)
+- [T6.5 ஆய்வுக் கண்டறிதல்கள் மற்றும் அறிவியல் வரம்புகள்](docs/RESEARCH_FINDINGS.md)
+- [T7.1 பாதுகாப்பான பிழை கையாளுதல், logs மற்றும் recovery](docs/ERROR_HANDLING.md)
+- [T7.2 நிர்வாக authentication, input controls மற்றும் dependency audit](docs/ADMIN_SECURITY.md)

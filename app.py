@@ -1,15 +1,34 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from functools import wraps
 
-from flask import Flask, render_template, request
+import re
+from uuid import uuid4
+
+from flask import Flask, Response, abort, g, make_response, render_template, request
+from werkzeug.exceptions import HTTPException
 
 from config import settings
 from karuvottam.calendar_engine import CalendarRule
-from karuvottam.data_access import DataAccess
+from karuvottam.calendar_view import CalendarViewService
+from karuvottam.data_access import DataAccess, DataAccessError
+from karuvottam.error_handling import configure_application_logging
+from karuvottam.forecast_calendar import ForecastCalendarService, VIEW_MODES
+from karuvottam.forecast_inputs import StoredForecastInputService
+from karuvottam.forecast_timeline import (
+    ForecastTimelineEngine,
+)
 from karuvottam.lunar_events import LunarEventEngine
+from karuvottam.observation_inspection import ObservationInspectionService
+from karuvottam.probability_calibration import ProbabilityCalibrationEngine
+from karuvottam.rain_categories import RainCategoryEngine
+from karuvottam.research_scoring import ResearchScoringEngine
+from karuvottam.security import AdminAuthenticator, query_parameters_are_safe
+from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
     RawWeatherPayloadStore,
     WeatherIngestionService,
+    WeatherClientError,
 )
 from karuvottam.weather_csv import WeatherCsvService
 from karuvottam.weather_provider import selected_historical_provider
@@ -23,7 +42,15 @@ WEATHER_PROVIDER_SPEC = selected_historical_provider(
 )
 
 app = Flask(__name__)
+configure_application_logging(
+    app.logger,
+    log_path=settings.log_path,
+    level=settings.log_level,
+    secrets=(settings.weather_api_key or '', settings.admin_password or ''),
+)
 app.config.from_mapping(
+    DEBUG=False,
+    MAX_CONTENT_LENGTH=settings.max_request_bytes,
     LOCATION_NAME=settings.location_name,
     LATITUDE=settings.latitude,
     LONGITUDE=settings.longitude,
@@ -38,8 +65,16 @@ app.config.from_mapping(
     WEATHER_API_BASE_URL=settings.weather_api_base_url,
     DATABASE_PATH=str(settings.database_path),
 )
+ADMIN_AUTHENTICATOR = AdminAuthenticator(
+    settings.admin_username,
+    settings.admin_password,
+)
 DATA_ACCESS = DataAccess(settings.database_path)
 WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
+RESEARCH_SCORING_ENGINE = ResearchScoringEngine()
+RAIN_CATEGORY_ENGINE = RainCategoryEngine()
+FORECAST_TIMELINE_ENGINE = ForecastTimelineEngine(settings.timezone)
+PROBABILITY_CALIBRATION_ENGINE = ProbabilityCalibrationEngine()
 WEATHER_CSV_SERVICE = WeatherCsvService(DATA_ACCESS, WEATHER_QUALITY_VALIDATOR)
 WEATHER_CLIENT = OpenMeteoHistoricalClient(
     WEATHER_PROVIDER_SPEC,
@@ -54,12 +89,28 @@ WEATHER_INGESTION_SERVICE = WeatherIngestionService(
     RawWeatherPayloadStore(settings.weather_raw_data_dir),
     WEATHER_QUALITY_VALIDATOR,
 )
+FORECAST_INPUT_SERVICE = StoredForecastInputService(
+    DATA_ACCESS,
+    RESEARCH_SCORING_ENGINE,
+    WEATHER_QUALITY_VALIDATOR,
+    location_name=settings.location_name,
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+    source=f'{WEATHER_PROVIDER_SPEC.key}:{WEATHER_PROVIDER_SPEC.model}',
+)
 app.extensions['data_access'] = DATA_ACCESS
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC
 app.extensions['weather_client'] = WEATHER_CLIENT
 app.extensions['weather_quality_validator'] = WEATHER_QUALITY_VALIDATOR
+app.extensions['research_scoring_engine'] = RESEARCH_SCORING_ENGINE
+app.extensions['rain_category_engine'] = RAIN_CATEGORY_ENGINE
+app.extensions['forecast_timeline_engine'] = FORECAST_TIMELINE_ENGINE
+app.extensions['probability_calibration_engine'] = PROBABILITY_CALIBRATION_ENGINE
 app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
+app.extensions['forecast_input_service'] = FORECAST_INPUT_SERVICE
+app.extensions['admin_authenticator'] = ADMIN_AUTHENTICATOR
 
 LOCATION_TIMEZONE = settings.timezone
 REFERENCE_MONTH, REFERENCE_DAY = settings.chithirai_reference_parts
@@ -75,6 +126,185 @@ WINDOW_ENGINE = KaruvottamWindowEngine(
     margazhi_anchor_year=settings.margazhi_alternation_anchor_year,
     margazhi_anchor_phase=settings.margazhi_alternation_anchor_phase,
 )
+STATUS_DASHBOARD_SERVICE = StatusDashboardService(
+    DATA_ACCESS,
+    WINDOW_ENGINE,
+    location_name=settings.location_name,
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+)
+CALENDAR_VIEW_SERVICE = CalendarViewService(DATA_ACCESS, WINDOW_ENGINE)
+FORECAST_CALENDAR_SERVICE = ForecastCalendarService(CALENDAR_RULE)
+OBSERVATION_INSPECTION_SERVICE = ObservationInspectionService(
+    DATA_ACCESS,
+    location_name=settings.location_name,
+    latitude=settings.latitude,
+    longitude=settings.longitude,
+    timezone_name=settings.timezone_name,
+)
+app.extensions['status_dashboard_service'] = STATUS_DASHBOARD_SERVICE
+app.extensions['calendar_view_service'] = CALENDAR_VIEW_SERVICE
+app.extensions['forecast_calendar_service'] = FORECAST_CALENDAR_SERVICE
+app.extensions['observation_inspection_service'] = OBSERVATION_INSPECTION_SERVICE
+
+MIN_UI_YEAR = 2015
+MAX_UI_YEAR = 2100
+REQUEST_ID_PATTERN = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+
+
+@app.before_request
+def assign_request_id() -> None:
+    supplied = request.headers.get('X-Request-ID', '')
+    g.request_id = supplied if REQUEST_ID_PATTERN.fullmatch(supplied) else uuid4().hex
+
+
+@app.before_request
+def validate_query_parameters() -> None:
+    if not query_parameters_are_safe(
+        request.query_string,
+        list(request.args.lists()),
+    ):
+        abort(400)
+
+
+@app.after_request
+def include_request_id(response: Response) -> Response:
+    response.headers['X-Request-ID'] = getattr(g, 'request_id', uuid4().hex)
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; object-src 'none'; base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'no-referrer'
+    if request.path.startswith('/admin'):
+        response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+def add_ui_notice(message: str) -> None:
+    existing = getattr(g, 'ui_notice', None)
+    g.ui_notice = f'{existing} {message}' if existing else message
+
+
+@app.context_processor
+def inject_ui_notice():
+    return {
+        'ui_notice': getattr(g, 'ui_notice', None),
+        'request_id': getattr(g, 'request_id', None),
+    }
+
+
+def _render_error(status_code: int, title: str, message: str):
+    return make_response(
+        render_template(
+            'error.html',
+            status_code=status_code,
+            error_title=title,
+            error_message=message,
+        ),
+        status_code,
+    )
+
+
+def require_admin(view):
+    """Protect an administration view without cookie or session state."""
+    @wraps(view)
+    def protected_view(*args, **kwargs):
+        authenticator = app.extensions['admin_authenticator']
+        if not authenticator.enabled:
+            app.logger.warning(
+                'Disabled admin route requested request_id=%s path=%s',
+                g.request_id,
+                request.path,
+            )
+            return _render_error(
+                503,
+                'நிர்வாக அணுகல் அமைக்கப்படவில்லை',
+                'நிர்வாகச் சான்றுகளை சூழல் மாறிகளில் அமைக்கவும்.',
+            )
+        if not authenticator.authenticate(request.headers.get('Authorization')):
+            app.logger.warning(
+                'Admin authentication rejected request_id=%s path=%s',
+                g.request_id,
+                request.path,
+            )
+            response = _render_error(
+                401,
+                'நிர்வாக அங்கீகாரம் தேவை',
+                'செல்லுபடியாகும் நிர்வாகச் சான்றுகளை வழங்கவும்.',
+            )
+            response.headers['WWW-Authenticate'] = (
+                'Basic realm="Karuvottam administration", charset="UTF-8"'
+            )
+            return response
+        g.admin_username = authenticator.username
+        return view(*args, **kwargs)
+
+    return protected_view
+
+
+@app.errorhandler(DataAccessError)
+def handle_database_error(error: DataAccessError):
+    app.logger.exception(
+        'Database request failed request_id=%s method=%s path=%s error_type=%s',
+        g.request_id,
+        request.method,
+        request.path,
+        type(error).__name__,
+    )
+    return _render_error(
+        503,
+        'தரவுச் சேவை தற்காலிகமாகக் கிடைக்கவில்லை',
+        'சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
+    )
+
+
+@app.errorhandler(WeatherClientError)
+def handle_weather_error(error: WeatherClientError):
+    app.logger.exception(
+        'Weather provider request failed request_id=%s method=%s path=%s error_type=%s',
+        g.request_id,
+        request.method,
+        request.path,
+        type(error).__name__,
+    )
+    return _render_error(
+        503,
+        'வானிலைச் சேவை தற்காலிகமாகக் கிடைக்கவில்லை',
+        'சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.',
+    )
+
+
+@app.errorhandler(HTTPException)
+def handle_http_error(error: HTTPException):
+    titles = {
+        404: 'கோரிய பக்கம் கிடைக்கவில்லை',
+        405: 'இந்தச் செயல் அனுமதிக்கப்படவில்லை',
+    }
+    title = titles.get(error.code or 500, 'கோரிக்கையை நிறைவேற்ற முடியவில்லை')
+    return _render_error(
+        error.code or 500,
+        title,
+        'முகப்புப் பக்கத்திற்குத் திரும்பி மீண்டும் முயற்சிக்கவும்.',
+    )
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error: Exception):
+    app.logger.exception(
+        'Unexpected request failure request_id=%s method=%s path=%s error_type=%s',
+        g.request_id,
+        request.method,
+        request.path,
+        type(error).__name__,
+    )
+    return _render_error(
+        500,
+        'எதிர்பாராத பிழை ஏற்பட்டது',
+        'இந்தக் குறிப்பு எண்ணுடன் நிர்வாகியைத் தொடர்புகொள்ளவும்.',
+    )
 
 def karuvottam_window(year: int, kind: str):
     window = WINDOW_ENGINE.generate(kind, year)
@@ -84,10 +314,27 @@ def karuvottam_window(year: int, kind: str):
 def requested_year(default: int = 2026) -> int:
     raw_year = request.args.get('year', str(default))
     try:
-        return int(raw_year)
+        year = int(raw_year)
     except ValueError:
         app.logger.warning('Invalid year parameter %r; using %s', raw_year, default)
+        add_ui_notice(
+            f'ஆண்டு செல்லாது; இயல்புநிலை {default} ஆண்டு காட்டப்படுகிறது.'
+        )
         return default
+    if not MIN_UI_YEAR <= year <= MAX_UI_YEAR:
+        app.logger.warning(
+            'Invalid year parameter %r; supported range is %s-%s; using %s',
+            raw_year,
+            MIN_UI_YEAR,
+            MAX_UI_YEAR,
+            default,
+        )
+        add_ui_notice(
+            f'ஆண்டு {MIN_UI_YEAR}–{MAX_UI_YEAR} வரம்பில் இருக்க வேண்டும்; '
+            f'{default} ஆண்டு காட்டப்படுகிறது.'
+        )
+        return default
+    return year
 
 
 def forecast_period_after_window(window_end: datetime, total_days: int):
@@ -140,10 +387,40 @@ def fmt(d):
 def fmt_datetime(value):
     return value.strftime('%d-%m-%Y %H:%M')
 
+
+@app.template_filter('dashboard_datetime')
+def dashboard_datetime(value):
+    if not value:
+        return 'தரவு இல்லை'
+    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    return parsed.astimezone(LOCATION_TIMEZONE).strftime('%d-%m-%Y %H:%M')
+
+
+@app.template_filter('quality_tamil')
+def quality_tamil(value):
+    labels = {
+        'valid': 'செல்லுபடியாகும்',
+        'verified': 'சரிபார்க்கப்பட்டது',
+        'calculated': 'கணக்கிடப்பட்டது',
+        'warning': 'எச்சரிக்கை',
+        'invalid': 'செல்லாதது',
+        'unavailable': 'தரவு இல்லை',
+        'unvalidated_reanalysis': 'சரிபார்க்காத மறுபகுப்பாய்வு',
+        'missing': 'மதிப்புகள் விடுபட்டவை',
+        'out_of_range': 'வரம்பிற்கு வெளியே',
+        'duplicate': 'நகல் பதிவு',
+        'interpolated': 'இடைமதிப்பீடு',
+        'outside_window': 'கால வரம்பிற்கு வெளியே',
+    }
+    if not value:
+        return 'தரவு இல்லை'
+    return ' + '.join(labels.get(part, part) for part in value.split('+'))
+
 @app.route('/')
 def index():
     year = requested_year()
     cycle = build_cycle(year)
+    dashboard = STATUS_DASHBOARD_SERVICE.build()
     lunar_events = [
         {
             'month_name': window.season_name_tamil,
@@ -162,38 +439,146 @@ def index():
         calendar_rule=CALENDAR_RULE,
         lunar_events=lunar_events,
         lunar_error=None,
+        dashboard=dashboard,
+    )
+
+
+@app.route('/admin')
+@require_admin
+def admin_dashboard():
+    dashboard = STATUS_DASHBOARD_SERVICE.build()
+    return render_template(
+        'admin.html',
+        dashboard=dashboard,
+        admin_username=g.admin_username,
+        provider_key=WEATHER_PROVIDER_SPEC.key,
+        provider_model=WEATHER_PROVIDER_SPEC.model,
+        api_key_configured=settings.weather_api_key is not None,
     )
 
 @app.route('/prediction')
 def prediction():
     year = requested_year()
-    cycle = build_cycle(year)
-    mode = request.args.get('mode', 'aadi')
-    start = cycle['aadi_prediction_start'] if mode == 'aadi' else cycle['margazhi_prediction_start']
-    days = 180 if mode == 'aadi' else 140
-    rows = []
-    # MVP placeholder forecast: transparent demo values, not scientific predictions.
-    for i in range(days):
-        d = start + timedelta(days=i)
-        probability = round(35 + 25 * ((i % 14) / 13), 1)
-        intensity = 'மழையின்மை' if probability < 45 else ('தூறல்' if probability < 60 else 'மிதமான மழை')
-        tamil_date = CALENDAR_RULE.from_gregorian(d)
-        rows.append({
-            'day': i + 1,
-            'date': fmt(d),
-            'tamil_date': tamil_date.format_tamil(),
-            'probability': probability,
-            'intensity': intensity,
-        })
+    mode = requested_prediction_mode()
+    view_mode = request.args.get('view', 'day')
+    if view_mode not in VIEW_MODES:
+        app.logger.warning(
+            'Invalid forecast view %r; using day',
+            view_mode,
+        )
+        add_ui_notice('காட்சி வகை செல்லாது; நாள் காட்சி காட்டப்படுகிறது.')
+        view_mode = 'day'
+    timeline, forecast_input = build_prediction_context(year, mode)
+    forecast_calendar = FORECAST_CALENDAR_SERVICE.build(timeline, view_mode)
     return render_template(
         'prediction.html',
-        rows=rows,
         mode=mode,
         year=year,
-        days=days,
-        start=fmt(start),
+        days=timeline.total_days,
+        start=fmt(timeline.prediction_start),
         calendar_rule=CALENDAR_RULE,
+        timeline=timeline,
+        forecast_calendar=forecast_calendar,
+        forecast_input=forecast_input,
+    )
+
+
+def requested_prediction_mode() -> str:
+    mode = request.args.get('mode', 'aadi')
+    if mode in {'aadi', 'margazhi'}:
+        return mode
+    add_ui_notice('கருவோட்ட வகை செல்லாது; ஆடி தேர்ந்தெடுக்கப்பட்டது.')
+    return 'aadi'
+
+
+def build_prediction_timeline(year: int, mode: str):
+    timeline, _ = build_prediction_context(year, mode)
+    return timeline
+
+
+def build_prediction_context(year: int, mode: str):
+    cycle = build_cycle(year)
+    source_window = cycle[f'{mode}_window']
+    mapping_basis_end = (
+        cycle['margazhi_window'].end_datetime_local
+        if mode == 'aadi'
+        else cycle['next_aadi_window'].end_datetime_local
+    )
+    forecast_input = FORECAST_INPUT_SERVICE.score(source_window)
+    timeline = FORECAST_TIMELINE_ENGINE.generate(
+        source_window,
+        mapping_basis_end_local=mapping_basis_end,
+        research_score=forecast_input.research_score,
+        generated_at=datetime.now(timezone.utc),
+    )
+    return timeline, forecast_input
+
+
+@app.route('/prediction.csv')
+def prediction_csv():
+    year = requested_year()
+    mode = requested_prediction_mode()
+    timeline = build_prediction_timeline(year, mode)
+    csv_data = FORECAST_CALENDAR_SERVICE.export_csv(timeline)
+    filename = f'karuvottam-{mode}-{year}-forecast.csv'
+    return Response(
+        csv_data,
+        content_type='text/csv; charset=utf-8',
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"',
+        },
+    )
+
+
+@app.route('/calendar')
+def calendar_view():
+    year = requested_year()
+    calendar = CALENDAR_VIEW_SERVICE.build(year)
+    return render_template(
+        'calendar.html',
+        calendar=calendar,
+        selected_year=year,
+    )
+
+
+@app.route('/observations')
+def observations():
+    raw_start = request.args.get('start', '').strip()
+    raw_end = request.args.get('end', '').strip()
+    source = request.args.get('source', '').strip() or None
+    start_date = end_date = None
+    input_error = None
+    if raw_start or raw_end:
+        try:
+            if not raw_start or not raw_end:
+                raise ValueError
+            start_date = date.fromisoformat(raw_start)
+            end_date = date.fromisoformat(raw_end)
+        except ValueError:
+            input_error = (
+                'தொடக்கமும் முடிவும் YYYY-MM-DD வடிவில் செல்லுபடியாக உள்ளிடப்பட வேண்டும்.'
+            )
+            start_date = end_date = None
+    try:
+        inspection = OBSERVATION_INSPECTION_SERVICE.build(
+            start_date=start_date,
+            end_date=end_date,
+            source=source,
+        )
+    except ValueError as exc:
+        app.logger.warning('Invalid observation range: %s', exc)
+        input_error = 'தேதி வரம்பு செல்லாது அல்லது 366 நாட்களை மீறுகிறது.'
+        inspection = OBSERVATION_INSPECTION_SERVICE.build(source=source)
+    return render_template(
+        'observations.html',
+        inspection=inspection,
+        input_error=input_error,
     )
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=settings.port, debug=False)
+    app.run(
+        host='127.0.0.1',
+        port=settings.port,
+        debug=False,
+        use_reloader=False,
+    )

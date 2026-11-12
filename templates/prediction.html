@@ -3,38 +3,114 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>மழை முன்னறிவிப்பு</title>
+    <title>மழை முன்னறிவிப்பு நாட்காட்டி</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="wrap"><a class="back" href="/?year={{year}}">← முதற்பக்கம்</a>
-    <h1>{{'ஆடி' if mode=='aadi' else 'மார்கழி'}} அடிப்படையிலான {{days}} நாள் முன்னறிவிப்பு</h1>
-    <p>தொடக்க நாள்: <b>{{start}}</b></p>
-    <div class="card tablewrap">
-        <table>
-            <thead>
-            <tr>
-                <th>நாள்</th>
-                <th>தேதி</th>
-                <th>தனிப்பயன் தமிழ் தேதி</th>
-                <th>மழை நிகழ்தகவு*</th>
-                <th>தீவிரம்*</th>
-            </tr>
-            </thead>
-            <tbody>{% for r in rows %}
-            <tr>
-                <td>{{r.day}}</td>
-                <td>{{r.date}}</td>
-                <td>{{r.tamil_date}}</td>
-                <td>{{r.probability}}%</td>
-                <td>{{r.intensity}}</td>
-            </tr>
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+<main class="wrap forecast-page" id="main-content" tabindex="-1">
+    <a class="back" href="/?year={{year}}">← முதற்பக்கம்</a>
+    <header class="forecast-header">
+        <div>
+            <div class="eyebrow">ஆதார நிலை தெளிவாகக் காட்டப்படுகிறது</div>
+            <h1>{{'ஆடி' if mode=='aadi' else 'மார்கழி'}} அடிப்படையிலான {{days}} நாள் முன்னறிவிப்பு</h1>
+            <p>{{timeline.prediction_start.strftime('%d-%m-%Y')}} முதல்
+                {{timeline.prediction_end.strftime('%d-%m-%Y')}} வரை · உள்ளூர் தேதிகள்</p>
+        </div>
+        <a class="button-link" href="/prediction.csv?year={{year}}&mode={{mode}}">CSV பதிவிறக்கம்</a>
+    </header>
+
+    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
+
+    <nav class="forecast-controls" aria-label="முன்னறிவிப்பு காட்சி கட்டுப்பாடுகள்">
+        <div class="tab-group" aria-label="கருவோட்ட மூலம்">
+            <a class="tab {{'active' if mode == 'aadi' else ''}}"
+               {% if mode == 'aadi' %}aria-current="page"{% endif %}
+               href="/prediction?year={{year}}&mode=aadi&view={{forecast_calendar.mode}}">ஆடி · 180 நாள்</a>
+            <a class="tab {{'active' if mode == 'margazhi' else ''}}"
+               {% if mode == 'margazhi' %}aria-current="page"{% endif %}
+               href="/prediction?year={{year}}&mode=margazhi&view={{forecast_calendar.mode}}">மார்கழி · 140 நாள்</a>
+        </div>
+        <div class="tab-group" aria-label="காலண்டர் அளவு">
+            {% for view_key, view_label in [('day', 'நாள்'), ('week', 'வாரம்'), ('month', 'மாதம்')] %}
+                <a class="tab {{'active' if forecast_calendar.mode == view_key else ''}}"
+                   {% if forecast_calendar.mode == view_key %}aria-current="page"{% endif %}
+                   href="/prediction?year={{year}}&mode={{mode}}&view={{view_key}}">{{view_label}}</a>
             {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <p class="foot">நாட்காட்டி விதி: {{calendar_rule.reference_label}} = சித்திரை 1;
-        பதிப்பு {{calendar_rule.version}}. இது அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல.</p>
-    <p class="foot">* MVP விளக்க மதிப்புகள் மட்டுமே. இவை அளவீடு செய்யப்பட்ட மழை நிகழ்தகவுகள் அல்ல.</p></main>
+        </div>
+    </nav>
+
+    <section class="forecast-guardrail" role="status">
+        <div>
+            <b>{{'தரவு இல்லை' if timeline.status == 'no_data' else 'ஆராய்ச்சி நிலை'}}</b>
+            <p>அளவுத்திருத்த ஆதாரம் போதாததால் நிகழ்தகவு வெளியிடப்படவில்லை. மழை அளவு மாதிரி இல்லாததால்
+                மழை வகையும் உருவாக்கப்படவில்லை; கற்பனை மதிப்புகள் காட்டப்படாது.</p>
+        </div>
+        <span class="pill {{'pill-warning' if timeline.status == 'no_data' else 'pill-info'}}">
+            தரம்: {{timeline.quality_flag|quality_tamil}}
+        </span>
+    </section>
+
+    {% if forecast_calendar.mode == 'day' %}
+        <div class="card tablewrap forecast-tablewrap">
+            <table class="forecast-table">
+                <caption class="sr-only">{{days}} நாள் மழை முன்னறிவிப்பு விவரங்கள்</caption>
+                <thead><tr>
+                    <th scope="col">நாள்</th><th scope="col">தேதி</th><th scope="col">தனிப்பயன் தமிழ் தேதி</th><th scope="col">ஆய்வு மதிப்பெண்*</th>
+                    <th scope="col">மழை வகை</th><th scope="col">மழை நிகழ்தகவு</th><th scope="col">தரம் / முறை</th><th scope="col">நிலை</th>
+                </tr></thead>
+                <tbody>
+                {% for item in forecast_calendar.entries %}
+                    {% set entry = item.forecast %}
+                    <tr>
+                        <td data-label="நாள்">{{entry.day_number}}</td>
+                        <td data-label="தேதி">{{entry.target_date.strftime('%d-%m-%Y')}}</td>
+                        <td data-label="தமிழ் தேதி">{{item.tamil_date}}</td>
+                        <td data-label="ஆய்வு மதிப்பெண்">{{entry.research_score if entry.research_score is not none else '—'}}</td>
+                        <td data-label="மழை வகை">{{item.category_tamil}}</td>
+                        <td data-label="மழை நிகழ்தகவு">{{'%g%%'|format(entry.rain_probability_pct) if entry.rain_probability_pct is not none else 'வெளியிடப்படவில்லை'}}</td>
+                        <td data-label="தரம் / முறை"><b>{{entry.quality_flag|quality_tamil}}</b><br><span class="foot">{{item.method_tamil}}</span></td>
+                        <td data-label="நிலை"><span class="forecast-status status-{{entry.status}}">{{item.status_tamil}}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <section class="forecast-period-grid" aria-label="{{'வார' if forecast_calendar.mode == 'week' else 'மாத'}} முன்னறிவிப்பு">
+            {% for period in forecast_calendar.periods %}
+                <article class="forecast-period-card">
+                    <div class="period-title">
+                        <div><span class="status-label">{{period.entries|length}} நாட்கள்</span><h2>{{period.title}}</h2></div>
+                        <span class="forecast-status {{'status-no_data' if period.no_data_days else 'status-experimental'}}">{{period.statuses_tamil|join(' / ')}}</span>
+                    </div>
+                    <p>{{period.start_date.strftime('%d-%m-%Y')}} → {{period.end_date.strftime('%d-%m-%Y')}}</p>
+                    <dl class="period-summary">
+                        <div><dt>மழை வகை</dt><dd>{{period.categories_tamil|join(', ') if period.categories_tamil else ('தரவு இல்லை' if period.no_data_days == period.entries|length else 'வெளியிடப்படவில்லை')}}</dd></div>
+                        <div><dt>மழை நிகழ்தகவு</dt><dd>{{period.probability_display or 'வெளியிடப்படவில்லை'}}</dd></div>
+                        <div><dt>தர நிலை</dt><dd>{% for quality in period.quality_flags %}{{quality|quality_tamil}}{{', ' if not loop.last else ''}}{% endfor %}</dd></div>
+                        <div><dt>கணிப்பு முறை</dt><dd>{{period.methods_tamil|join(', ')}}</dd></div>
+                        <div><dt>தரவு இல்லாத நாட்கள்</dt><dd>{{period.no_data_days}} / {{period.entries|length}}</dd></div>
+                    </dl>
+                </article>
+            {% endfor %}
+        </section>
+    {% endif %}
+
+    <section class="forecast-provenance">
+        <h2>முன்னறிவிப்பு தடமறிதல்</h2>
+        <dl class="trace-list compact">
+            <div><dt>மூலச் சாளரம்</dt><dd>{{timeline.source_window_key}}</dd></div>
+            <div><dt>வானிலைத் தரவு மூலம்</dt><dd>{{forecast_input.source}}</dd></div>
+            <div><dt>பயன்பட்ட மணிகள்</dt><dd>{{forecast_input.received_hours}} / {{forecast_input.expected_hours}} ({{'%g'|format(forecast_input.coverage_pct)}}%)</dd></div>
+            <div><dt>காலவரிசை விதி</dt><dd>{{timeline.timeline_model_version}}</dd></div>
+            <div><dt>ஆய்வு மதிப்பெண் விதி</dt><dd>{{timeline.score_model_version}}</dd></div>
+            <div><dt>மழை வகை விதி</dt><dd>{{timeline.category_threshold_version}}</dd></div>
+            <div><dt>உருவாக்க நேரம்</dt><dd>{{timeline.generated_at.strftime('%d-%m-%Y %H:%M:%S %Z')}}</dd></div>
+        </dl>
+        <p class="foot">* ஆய்வு மதிப்பெண் நிகழ்தகவு அல்ல. CSV ஏற்றுமதியில் nullable probability/category fields,
+            தரம், முறை, reason codes மற்றும் அனைத்து model/rule versions-உம் பாதுகாக்கப்படுகின்றன.</p>
+    </section>
+</main>
 </body>
 </html>

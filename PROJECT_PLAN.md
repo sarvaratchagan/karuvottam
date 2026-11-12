@@ -87,7 +87,7 @@
 
 ### 2.7 மணிநேர அளவீட்டு விகிதம்
 - ஆடி: 1 மணிநேரக் கண்காணிப்புத் தரவு ↔ 10 எதிர்கால மழை-கணிப்பு மணிநேரங்கள்.
-- மார்கழி: 1 மணிநேரக் கண்காணிப்புத் தரவு ↔ 13.55 எதிர்கால மழை-கணிப்பு மணிநேரங்கள்.
+- மார்கழி: புதுப்பிக்கப்பட்ட 11 நாள் சாளரத்தில் 1 மணிநேரக் கண்காணிப்புத் தரவு ↔ `3360 / 264 = 12.727272…` எதிர்கால மணி நேரங்கள். பழைய 13.55 விகிதம் 248 மணி விதிக்குரியது; இனி பயன்படுத்தக்கூடாது.
 - இவை பயனாளர் வரையறுத்த கால இணைப்பு விதிகள் மட்டுமே; மழை நிகழ்தகவு அல்லது துல்லியத்தைத் தனியாக நிரூபிப்பதில்லை.
 - நாள்-அளவிலான மற்றும் மணி-அளவிலான முன்னறிவிப்புகளுக்கு முரண்பாடில்லாத தனி விவரக்குறிப்புகள் தேவை.
 
@@ -404,12 +404,16 @@ karuvottam/
 
 **முடிவு:** ஒரே உள்ளீட்டுக்கு ஒரே முடிவு; விதிகள் சோதிக்கக்கூடியவை.
 
+**செயலாக்க நிலை:** `research-index-1.0` மூலம் மழை, ஈரப்பதம், மேகம், வெப்பநிலை, காற்று ஆகிய ஐந்து கூறுகளுக்கான வெளிப்படையான 0–100 ஆய்வு மதிப்பெண் செயல்படுத்தப்பட்டுள்ளது. இது நிகழ்தகவு அல்ல; தவறான அல்லது 80%-க்கு குறைவான தரவில் மதிப்பெண் உருவாக்கப்படாது.
+
 #### T4.2 — மழை வகைப்படுத்தல்
 - மழையின்மை, தூறல், மிதமான மழை, கனமழைக்கான எல்லைகள்.
 - மழை அளவு மற்றும் கால இடைவெளியை வரையறுத்தல்.
 - எல்லை மதிப்புகளுக்கான சோதனைகள்.
 
 **முடிவு:** ஒவ்வொரு வகைக்கும் ஆவணப்படுத்தப்பட்ட விதி.
+
+**செயலாக்க நிலை:** `hourly-rain-categories-1.0` மூலம் முடிந்த 60 நிமிட மழைத் தொகைக்கு `0–<0.1 mm` மழையின்மை, `0.1–<2.5 mm` தூறல்/இலேசான மழை proxy, `2.5–<7.5 mm` மிதமான மழை, `≥7.5 mm` கனமழை என versioned எல்லைகள் செயல்படுத்தப்பட்டுள்ளன. வேறு interval அல்லது விடுபட்ட மதிப்பை ஊகித்து மாற்றாமல் “தரவு இல்லை” என வழங்குகிறது.
 
 #### T4.3 — 180 / 140 நாள் கணிப்பு
 - கால இணைப்பு விதியால் இலக்கு தேதிகள் / நேரங்களை உருவாக்குதல்.
@@ -419,6 +423,8 @@ karuvottam/
 
 **முடிவு:** கணிப்பு அட்டவணை சரியான கால வரம்பைக் கொண்டுள்ளது.
 
+**செயலாக்க நிலை:** `daily-timeline-1.0` மூலம் உள்ளூர் தேதிகளில் 180/140 நாள் inclusive timeline உருவாக்கப்பட்டுள்ளது. ஒவ்வொரு பதிவும் மூலச் சாளரம், விதி/மாதிரி பதிப்புகள், உருவாக்க நேரம், தரநிலை மற்றும் காரணத்தை வைத்திருக்கும். UI இப்போது configured location/source-ன் persisted hourly observations-ஐ source-window UTC hour-end labels-க்கு ஏற்றி quality validation பிறகு `research-index-1.0` கணக்கிடுகிறது; provider, பயன்படுத்திய/எதிர்பார்த்த மணிகள் மற்றும் coverage காட்டப்படுகின்றன. 2015–2024 ஆடி/மார்கழி source windows அனைத்தும் 100% coverage-உடன் experimental score உருவாக்குகின்றன. எதிர்கால மழை அளவு மாதிரி இன்னும் வரையறுக்கப்படாததால் probability/amount/category உருவாக்கப்படாது; உள்ளீடு இல்லையெனில் காரணத்துடன் “தரவு இல்லை” மட்டுமே காட்டப்படும்.
+
 #### T4.4 — நிகழ்தகவு அளவுத்திருத்தம்
 - வரலாற்று கணிப்புகளையும் உண்மையான மழையையும் ஒப்பிடுதல்.
 - Brier மதிப்பெண், நம்பகத்தன்மை வரைபடம் போன்ற முறைகள்.
@@ -426,6 +432,8 @@ karuvottam/
 - பயிற்சி மற்றும் மதிப்பீட்டுத் தரவை கால வரிசைப்படி பிரித்தல்.
 
 **முடிவு:** நிகழ்தகவு காட்டப்பட்டால் அதன் அளவுத்திருத்தமும் மதிப்பீட்டுக் காலமும் ஆவணப்படுத்தப்பட்டுள்ளன.
+
+**செயலாக்க நிலை:** `score-bin-calibration-1.0` மூலம் source-window அடிப்படையிலான காலவரிசை train/evaluation பிரிப்பு, Brier score, climatology baseline, reliability bins, ECE மற்றும் evidence publication gate செயல்படுத்தப்பட்டுள்ளன. T6.1 பல-ஆண்டு தரவு, T6.3 fixed-holdout metrics மற்றும் T6.4 rolling validation இப்போது உள்ளன; ஆனால் rolling முடிவுகள் Karuvottam incremental value-ஐ நிறுவவில்லை, score-calibration publication gate-மும் கடக்கப்படவில்லை. எனவே இந்தப் பணி “In Progress”, UI-இல் சதவீதம் மறைக்கப்பட்டே இருக்கும். Synthetic unit-test முடிவு அறிவியல் calibration ஆதாரம் அல்ல.
 
 ### கட்டம் 5 — நாட்காட்டி மற்றும் தமிழ் இடைமுகம்
 
@@ -439,12 +447,16 @@ karuvottam/
 
 **முடிவு:** பயன்பாட்டின் நிலையை ஒரே பக்கத்தில் புரிந்துகொள்ள முடியும்.
 
+**செயலாக்க நிலை:** முகப்புப் பக்கத்தில் அமைக்கப்பட்ட/செயலில் உள்ள இடம், தற்போது நடைபெறும் அல்லது அடுத்து வரும் கருவோட்டச் சாளரம், சமீபத்திய வானிலைப் பதிவு மற்றும் தரநிலை, கடைசி persisted forecast run, முக்கிய நடவடிக்கை எச்சரிக்கைகள் ஆகியவை ஒரே responsive தமிழ் status dashboard-இல் காட்டப்படுகின்றன. தரவுத்தளம் migrate ஆகாத நிலையிலும், தரவு/முன்னறிவிப்பு இல்லாத நிலையிலும் பக்கம் 500 பிழை தராமல் தெளிவான fallback நிலையைக் காட்டும்.
+
 #### T5.2 — கருவோட்டக் காலண்டர்
 - ஆடி / மார்கழி காலங்களை வேறுபடுத்துதல்.
 - தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வு, மார்கழி alternation, தொடக்கம், முடிவு காட்டுதல்.
 - கணக்கீட்டு விதியைப் பார்க்கும் வசதி.
 
 **முடிவு:** ஒவ்வொரு காலச் சாளரமும் எவ்வாறு கணக்கிடப்பட்டது என்பதை அறிய முடியும்.
+
+**செயலாக்க நிலை:** `/calendar` தமிழ் காட்சியில் ஆண்டு தேர்வு, ஆடி/மார்கழி தனித்தனி சாளரங்கள், தேர்ந்தெடுத்த அமாவாசை/பௌர்ணமி, local/UTC நிகழ்வு நேரம், provider/version/quality provenance, சேர்க்கப்படும் தொடக்கம் மற்றும் சேர்க்கப்படாத முடிவு, சரியான மணி நேரம், ஐந்து ஆண்டு மார்கழி alternation மற்றும் anchor விதி காட்டப்படுகின்றன. அதே season/year/rule-version பதிவு தரவுத்தளத்தில் உள்ளதா என்பதும் தெரியும்; migrate ஆகாத தரவுத்தளத்தில் கணக்கிடப்பட்ட காட்சி தெளிவான fallback எச்சரிக்கையுடன் இயங்கும்.
 
 #### T5.3 — மழை முன்னறிவிப்பு நாட்காட்டி
 - நாள் / வார / மாதக் காட்சிகள்.
@@ -455,12 +467,27 @@ karuvottam/
 
 **முடிவு:** 180 நாள் மற்றும் 140 நாள் கணிப்புகளை எளிதாகப் பார்க்க முடியும்.
 
+**செயலாக்க நிலை:** `/prediction` பக்கம் 180/140 நாள் timelines-க்கு responsive நாள், forecast-day அடிப்படையிலான 7 நாள் வாரம் மற்றும் Gregorian மாதக் காட்சிகளை வழங்குகிறது. மழை வகை, கிடைத்தால் மட்டும் probability, தரம், கணிப்பு முறை, experimental/no-data நிலை மற்றும் முழு model/rule provenance காட்டப்படுகின்றன. Evidence gate திறக்காத தற்போதைய நிலையில் probability/category கற்பனை செய்யப்படாமல் “வெளியிடப்படவில்லை”/“தரவு இல்லை” எனத் தெளிவாகக் காட்டப்படும். `/prediction.csv` அதே தினசரி timeline-ஐ UTF-8 CSV ஆக nullable evidence fields, reason codes மற்றும் traceability metadata உடன் ஏற்றுமதி செய்கிறது; 760px-க்கு கீழ் நாள் rows cards ஆக மாறுகின்றன.
+
 #### T5.4 — தரவு ஆய்வுப் பக்கம்
 - வெப்பநிலை, ஈரப்பதம், மேக மூட்டம், மழை, காற்று ஆகியவற்றின் நேரத் தொடர் வரைபடங்கள்.
 - மூலத் தரவு மற்றும் இடைமதிப்பீட்டுத் தரவை வேறுபடுத்துதல்.
 - விடுபட்ட தரவு பகுதிகளை அடையாளப்படுத்துதல்.
 
 **முடிவு:** ஆய்வாளர் கணிப்பு விதிகளுக்குப் பயன்படுத்திய தரவை ஆய்வு செய்ய முடியும்.
+
+**செயலாக்க நிலை:** `/observations` பக்கம் date/source filters, coverage மற்றும் raw/interpolated counts, வெப்பநிலை/ஈரப்பதம்/மேக மூட்டம்/மழை/காற்று dependency-free SVG time-series, field-level missing-value counts, hourly gap ranges மற்றும் சமீபத்திய 100 பதிவு விவரங்களை வழங்குகிறது. கோடுகள் உண்மையான இடைவெளிகளைக் கடந்து இணைக்கப்படாது; raw மற்றும் interpolation markers தனித்தனியாகத் தெரியும். UTC hourly cadence இந்திய `+05:30` local-date எல்லைகளுடன் சரியாக align செய்யப்படுகிறது. Configured location/தரவு/database இல்லாத நிலைகளும் தெளிவான தமிழ் fallback ஆகக் காட்டப்படுகின்றன.
+
+#### T5.5 — UI ஏற்றுக்கொள்ளல் மற்றும் அணுகல்தன்மைச் சோதனைகள்
+- முக்கிய வழித்தடங்களில் தமிழ்/UTF-8 உள்ளடக்கம் மற்றும் semantic page structure-ஐச் சரிபார்த்தல்.
+- keyboard skip link, focus indicator, form labels, table captions/headings மற்றும் SVG accessible names சேர்த்தல்.
+- தவறான ஆண்டு, mode, view மற்றும் தேதி உள்ளீடுகளுக்கு புரிந்துகொள்ளக்கூடிய தமிழ் fallback காட்டுதல்.
+- தரவு/தரவுத்தளம் இல்லாத நிலைகளில் 500 பிழையின்றி செயல்படுவதைச் சரிபார்த்தல்.
+- சிறிய திரைகளுக்கான card layouts, 44px controls, reduced-motion மற்றும் forced-colors ஆதரவைச் சரிபார்த்தல்.
+
+**முடிவு:** முக்கிய தமிழ் பக்கங்கள் semantic automated audit-ஐக் கடக்கின்றன; தவறான உள்ளீடும் தரவு இல்லாத நிலையும் பயனருக்குத் தெளிவாகக் காட்டப்படுகின்றன.
+
+**செயலாக்க நிலை:** `/`, `/calendar`, `/prediction` நாள்/வாரம்/மாதக் காட்சிகள் மற்றும் `/observations` ஆகியவற்றுக்கு Flask test-client அடிப்படையிலான UI acceptance suite உள்ளது. ஒரே `main`, skip target, Tamil text, unique IDs, labelled controls, named SVGs, table captions/header scope மற்றும் viewport metadata சரிபார்க்கப்படுகின்றன. shared CSS தெளிவான keyboard focus, touch-target அளவு, responsive table-to-card மாற்றம், reduced-motion மற்றும் forced-colors ஆதரவை வழங்குகிறது. இது structural regression coverage; வெளியீட்டிற்கு முன் உண்மையான browser zoom, keyboard மற்றும் screen-reader manual check இன்னும் பரிந்துரைக்கப்படுகிறது.
 
 ### கட்டம் 6 — பின்னோக்குச் சோதனை மற்றும் அறிவியல் மதிப்பீடு
 
@@ -471,6 +498,8 @@ karuvottam/
 
 **முடிவு:** மீண்டும் பயன்படுத்தக்கூடிய மதிப்பீட்டுத் தரவுத் தொகுப்பு.
 
+**செயலாக்க நிலை:** `evaluation-dataset-1.0` pipeline ஆண்டு வரம்பிற்குத் தேவையான ERA5 weather coverage-ஐ கணக்கிட்டு, bounded idempotent chunks-ஆக சேகரிக்கிறது. ஒவ்வொரு ஆடி/மார்கழி source window-மும் அதன் 180/140 local-day observed rainfall outcomes-உடன் stable key மூலம் இணைக்கப்படுகிறது. Source features, target rainfall, expected/observed/missing/interpolated/measurement-issue hours மற்றும் quality flags நிலையான UTF-8 CSV-ல் எழுதப்படுகின்றன. தனி gap report மற்றும் SHA-256 checksums, location/provider, lunar provenance, rule/model versions, transformations, raw-payload references மற்றும் ERA5-vs-gauge measurement வரம்புகளைக் கொண்ட manifest மீளுருவாக்கத்தைக் காக்கிறது. Missing hours zero-fill செய்யப்படுவதில்லை; incompatible interval அளவுகள் மழைத் தொகையில் சேர்க்கப்படுவதில்லை. 2015–2024 local reference build 91,368 hourly records-லிருந்து gap இல்லாத 3,200 linked daily rows உருவாக்கியது; CSV SHA-256 `221dd9f29b4deb6c43163eee02f1c3e19829adbdeed2d4b0d4d4702038dd07eb`.
+
 #### T6.2 — அடிப்படை மாதிரியுடன் ஒப்பீடு
 - கருவோட்டத் தரவு மட்டும்.
 - வழக்கமான வரலாற்று வானிலை / பருவ அடிப்படை மாதிரி.
@@ -478,6 +507,8 @@ karuvottam/
 - ஒரே மதிப்பீட்டுக் காலம் மற்றும் அளவீடுகளைப் பயன்படுத்துதல்.
 
 **முடிவு:** கருவோட்டத் தகவல் கூடுதல் மதிப்பு தருகிறதா அளவிடப்படுகிறது.
+
+**செயலாக்க நிலை:** `baseline-comparison-1.0` ஒரே time-ordered holdout row identities மீது மூன்று deterministic prediction streams உருவாக்குகிறது: target season/month training climatology (`seasonal-climatology-1.0`), source-window weather features மற்றும் exact forecast day அடிப்படையிலான Karuvottam-only nearest neighbours (`karuvottam-knn-1.0`), source features உடன் target month/horizon distance சேர்த்த combined nearest neighbours (`combined-knn-1.0`). Training years evaluation years-க்கு முன் இருக்க வேண்டும்; scaling மற்றும் neighbour selection training rows-ல் மட்டுமே நடக்கும்; holdout observed rainfall prediction logic-ல் நுழையாது. 2015–2021 training மற்றும் 2022–2024 evaluation reference run-ல் மூன்று approaches-க்கும் ஒரே 960 rows வீதம், மொத்தம் 2,880 available predictions உருவாக்கப்பட்டன. T6.3 fixed-holdout மற்றும் T6.4 rolling-origin reports இப்போது இந்த predictions-ஐ அளவிட்டு அதன் வரம்புகளைப் பதிவு செய்கின்றன.
 
 #### T6.3 — மதிப்பீட்டு அளவீடுகள்
 - மழை உண்டா / இல்லையா: precision, recall, F1, ROC-AUC (பொருத்தமானால்).
@@ -487,12 +518,26 @@ karuvottam/
 
 **முடிவு:** மாதிரிகளின் பலமும் பலவீனமும் அளவிடப்படுகின்றன.
 
+**செயலாக்க நிலை:** `evaluation-metrics-1.0` T6.2 prediction CSV மற்றும் manifest checksum-ஐச் சரிபார்த்து, மூன்று approaches-க்கும் ஒரே holdout identity/outcome/provenance இருப்பதை கட்டாயப்படுத்துகிறது. 50% preliminary wet-frequency cutoff-ல் precision, recall, F1 மற்றும் tie-aware ROC-AUC; 10-bin Brier/reliability/ECE; MAE, RMSE, bias மற்றும் Pearson correlation கணக்கிடப்படுகின்றன. முடிவுகள் overall, ஆடி/மார்கழி season, Gregorian target month மற்றும் 30 நாள் forecast-horizon bands எனப் பிரிக்கப்பட்டு deterministic metrics CSV, reliability CSV, Markdown summary மற்றும் SHA-256 manifest ஆக எழுதப்படுகின்றன. 2015–2021 training / 2022–2024 fixed holdout reference run-ல் 2,880 predictions அனைத்தும் மதிப்பிடப்பட்டன. Combined model F1/recall-ல் முன்னிலை பெற்றாலும், seasonal climatology Brier மற்றும் rainfall-amount errors-ல் சிறந்தது; எனவே Karuvottam கூடுதல் மதிப்பு நிரூபிக்கப்பட்டதாக கூறப்படவில்லை. T6.4 rolling validation இந்த எச்சரிக்கையை உறுதிப்படுத்துகிறது; UI probability gate மூடப்பட்டே உள்ளது.
+
 #### T6.4 — கால வரிசைச் சரிபார்ப்பு
 - கடந்த ஆண்டுகளைப் பயிற்சிக்குப் பயன்படுத்தி பின்னர் வந்த ஆண்டுகளில் சோதித்தல்.
 - எதிர்காலத் தரவு பயிற்சியில் கலக்காததை உறுதி செய்தல்.
 - ஒவ்வொரு மாதிரி / விதி மாற்றத்திற்கும் பதிப்பு எண்.
 
 **முடிவு:** சோதனை முடிவுகள் மீண்டும் உருவாக்கக்கூடியவை.
+
+**செயலாக்க நிலை:** `rolling-origin-validation-1.0` expanding folds-ல் ஒவ்வொரு evaluation ஆண்டிற்கும் முந்தைய season years மட்டுமே nominal training range-ஆகப் பயன்படுத்துகிறது. அதற்கும் மேலாக, ஒவ்வொரு ஆடி/மார்கழி evaluation source-window தொடக்க உள்ளூர் தேதிக்கு முன் முடிந்த target outcomes மட்டுமே training, feature scaling மற்றும் neighbour selection-ல் சேர்க்கப்படுகின்றன; இன்னும் நிகழாத outcomes தனியாக எண்ணப்பட்டு விலக்கப்படுகின்றன. ஒவ்வொரு fold-க்கும் predictions, overall/season/month/horizon metrics, reliability bins மற்றும் source-window leakage audit உருவாக்கப்படுகின்றன; pooled out-of-fold report, dataset/calendar/timeline/measurement/metric/validation/model versions மற்றும் அனைத்து output SHA-256 values manifest-ல் பதியப்படுகின்றன. 2015-ல் training தொடங்கி 2020–2024 ஐந்து expanding folds கொண்ட reference run 4,800 predictions மற்றும் 10 passed source-window leakage checks உருவாக்கியது. Pooled seasonal climatology F1 `0.733226`, Brier `0.212113`, MAE `3.219839` ஆக இருந்து Karuvottam-only மற்றும் combined models-ஐ மொத்தத்தில் முந்தியது. ஆகவே probability publication gate திறக்கப்படவில்லை.
+
+#### T6.5 — ஆய்வுக் கண்டறிதல் சுருக்கம்
+- T6.3 fixed-holdout மற்றும் T6.4 rolling-origin artifacts-ஐ checksum-உடன் சரிபார்த்தல்.
+- Seasonal baseline-க்கு எதிரான paired source-window uncertainty-ஐ அளவிடுதல்.
+- Karuvottam கூடுதல் மதிப்பு தருகிறதா என்பதை முன் வரையறுக்கப்பட்ட decision rule மூலம் தீர்மானித்தல்.
+- முடிவின் இடம்/தரவு/கால/model வரம்புகள் மற்றும் probability publication நிலையைத் தெளிவாகக் கூறுதல்.
+
+**முடிவு:** ஆதாரமுள்ள முடிவும் அதன் uncertainty/வரம்புகளும் unsupported accuracy claim இல்லாமல் வெளியிடப்படுகின்றன.
+
+**செயலாக்க நிலை:** `research-findings-1.0` T6.3/T6.4 manifests மற்றும் அவற்றின் input file SHA-256 values-ஐச் சரிபார்த்து, seasonal climatology-க்கு எதிராக Karuvottam-only மற்றும் combined predictions-ஐ ஒரே 1,600 rolling identities மீது pair செய்கிறது. பத்து source-window blocks-ஐ 2,000 deterministic bootstrap iterations மூலம் resample செய்து Brier, MAE மற்றும் RMSE deltas-க்கு 95% percentile CI உருவாக்குகிறது. Brier மற்றும் MAE delta CI-களின் மேல் எல்லைகள் இரண்டும் 0-க்கு கீழ் இருந்தால் மட்டுமே incremental value supported என்ற முன் வரையறுக்கப்பட்ட rule பயன்படுத்தப்படுகிறது. Reference run-ல் Karuvottam-only Brier delta `0.063234` (95% CI `0.044215–0.081066`), MAE delta `0.535536 mm` (`0.327810–0.767997`); combined Brier delta `0.033421` (`0.021627–0.045750`), MAE delta `0.419416 mm` (`0.138232–0.725105`). Positive delta baseline-ஐவிட மோசமானது; இரு candidates-க்கும் incremental value ஆதரிக்கப்படவில்லை. இந்த முடிவு குறிப்பிட்ட இடம், ERA5 dataset, 2015–2024 காலம், விதிகள் மற்றும் models-க்கு மட்டும் பொருந்தும்; மரபின் பொதுவான மறுப்பு அல்ல. Probability publication disabled.
 
 ### கட்டம் 7 — பாதுகாப்பு, நம்பகத்தன்மை மற்றும் வெளியீடு
 
@@ -502,12 +547,16 @@ karuvottam/
 - ரகசிய விசைகளைப் பதிவுகளில் எழுதாதிருத்தல்.
 - API / தரவுத்தளத் தோல்விக்கான மீட்பு நடைமுறை.
 
+**செயலாக்க நிலை:** அனைத்து பதில்களுக்கும் சரிபார்க்கப்பட்ட அல்லது உருவாக்கப்பட்ட request ID சேர்க்கப்படுகிறது. 404/405, weather/database 503 மற்றும் எதிர்பாராத 500 நிலைகளுக்கு தொழில்நுட்ப விவரமில்லாத அணுகல்தன்மையுள்ள தமிழ் பிழைப் பக்கம் வழங்கப்படுகிறது. 2 MiB அளவில் சுழலும் ஐந்து காப்புப் பதிவுகளுடன் file logging அமைக்கப்பட்டு, API key/token/password/Authorization/Bearer மதிப்புகள் messages மற்றும் tracebacks இரண்டிலும் மறைக்கப்படுகின்றன. Weather retry diagnostics URL/body/key இல்லாமல் provider, model, status, attempt மற்றும் delay மட்டும் பதிவு செய்கின்றன. API retry/idempotent ingestion மற்றும் database rollback/degraded-read மீட்பு நடைமுறை `docs/ERROR_HANDLING.md`-இல் ஆவணப்படுத்தப்பட்டு automated tests மூலம் சரிபார்க்கப்படுகிறது.
+
 #### T7.2 — பாதுகாப்பு
 - நிர்வாகப் பக்கங்களுக்கு அங்கீகாரம்.
 - உள்ளீட்டு சரிபார்ப்பு.
 - ரகசிய விசைகளை சூழல் மாறிகளில் சேமித்தல்.
 - உற்பத்தியில் Flask debug mode அணைத்தல்.
 - சார்பு நூலகங்களைப் புதுப்பித்தல்.
+
+**செயலாக்க நிலை:** `/admin` பக்கம் environment-only username/password கொண்ட constant-time HTTP Basic authentication-ன் பின்னால் பாதுகாக்கப்படுகிறது; credentials இல்லையெனில் பாதுகாப்பற்ற default உருவாக்காமல் 503 ஆக மூடப்படுகிறது. நிர்வாகப் பதில்கள் cache செய்யப்படாது; secrets settings repr, Flask config, HTML, URL மற்றும் logs-ல் வெளியிடப்படாது. 1 MiB request-body வரம்பு, 4 KiB query வரம்பு, duplicate/control-character parameter rejection மற்றும் CSP/nosniff/frame/referrer headers சேர்க்கப்பட்டுள்ளன. Flask debug மற்றும் reloader வெளிப்படையாக அணைக்கப்பட்டுள்ளன. `pip check` மற்றும் `pip-audit 2.10.1 --strict` மூலம் 2026-10-29 அன்று resolved runtime dependency set சரிபார்க்கப்பட்டு broken requirements அல்லது அறியப்பட்ட vulnerabilities இல்லை என உறுதி செய்யப்பட்டது; மீண்டும் இயக்கும் நடைமுறை `docs/ADMIN_SECURITY.md`-இல் உள்ளது.
 
 #### T7.3 — காப்புப்பிரதி மற்றும் மீட்பு
 - தரவுத்தளக் காப்புப் பிரதியை திட்டமிட்டு எடுத்தல்.

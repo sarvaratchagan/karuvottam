@@ -54,6 +54,11 @@ Migration `002_weather_time_intervals.sql` adds the preceding-hour precipitation
 interval start, end, and duration to weather observations. Existing ERA5 rows are
 backfilled; records from sources with unknown accumulation semantics remain null.
 
+Migration `003_prediction_traceability.sql` adds source-window, mapping-boundary,
+score/category version, quality, generation-time, status, research-score, and reason
+fields to forecast runs and entries. Probability and predicted-rain fields remain
+nullable and are deliberately null for `daily-timeline-1.0`.
+
 Weather observations enforce the project identity key:
 
 `location_id + observed_at_utc + source`
@@ -86,10 +91,12 @@ database exception rolls back every write in the block. SQLite errors are mapped
 stable application exceptions: `DuplicateRecordError`, `ConstraintViolationError`,
 and `DataAccessError`. Callers should not parse SQLite error strings.
 
-The initial repositories cover locations, calendar rules, lunar events, Karuvottam
-windows, and hourly weather observations. Repositories for forecasts, validation,
-auditing, and weather-event analysis are added with those feature phases so their
-domain rules and write semantics are explicit rather than exposed through generic SQL.
+Repositories cover locations, calendar rules, lunar events, Karuvottam windows,
+hourly weather observations, and complete forecast timelines. `work.forecasts`
+persists a run and all of its entries in the surrounding unit-of-work transaction;
+`input_window_id` supplies the required database link to the source window.
+Repositories for validation, auditing, and weather-event analysis are added with
+those feature phases so their domain rules and write semantics remain explicit.
 
 ## PostgreSQL path
 
