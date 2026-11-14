@@ -118,12 +118,25 @@ Establish the historical data model and map before recent/live ingestion. T8.7 a
 |---|---|---:|---|---|---|---|
 | T9.1 | Support multiple locations | P4 | M5 | Done | Unassigned | Active-location selection, per-location calendar rules, location-keyed weather ingestion, stored windows and forecast runs, and location-matched UI/evidence are implemented; legacy single-location rows migrate when unambiguous |
 | T9.2 | Integrate station/IoT sensor data | P4 | T9.1 | Done | Unassigned | Registered site-matched station/IoT sensors accept documented hourly CSV, retain raw batch and per-reading provenance, reject conflicts and bad intervals, and appear as separately quality-checked observation sources |
-| T9.3 | Add email/message notifications | P4 | M5 | Todo | Unassigned | Users can configure meaningful alerts; delivery failures are visible and retryable |
-| T9.4 | Add user accounts and roles | P4 | T7.2 | Todo | Unassigned | Admin, researcher, viewer, and data-maintainer permissions are enforced |
-| T9.5 | Package as an installable mobile-friendly web app | P4 | T5.5, M5 | Todo | Unassigned | The supported mobile experience and offline/install behavior are documented and tested |
-| T9.6 | Evaluate advanced machine-learning models | P4 | T6.4, T8.8 | Todo | Unassigned | Models use leakage-safe evaluation, calibration, baseline comparison, and versioned reproducible inputs |
-| T9.7 | Add Tamil/English language selection | P4 | T5.5 | Todo | Unassigned | All user-facing strings are localizable and both languages pass UI checks |
-| T9.8 | Compare multiple weather providers | P4 | T6.1 | Todo | Unassigned | Provider coverage, disagreement, reliability, and impact on evaluation are reported |
+| T9.3 | Add email/message notifications | P4 | M5 | Done | Unassigned | Operator-configured source-health/recovery rules queue SMTP email or HTTPS message-webhook alerts on state changes; admin view and CLI show failures, with automatic backoff and manual retry |
+| T9.4 | Add user accounts and roles | P4 | T7.2 | Done | Unassigned | SQLite accounts use salted scrypt password hashes and operator-managed lifecycle; admin, researcher, viewer, and data-maintainer roles gate protected workspace routes while the environment administrator remains a bootstrap login |
+| T9.5 | Package as an installable mobile-friendly web app | P4 | T5.5, M5 | Done | Unassigned | Tamil PWA manifest, 192/512 icons, root service worker, network-only public data pages with explicit offline fallback, mobile layout refinements, and install/offline checks are documented and tested |
+| T9.6 | Evaluate advanced machine-learning models | P4 | T6.4, T8.8 | Done | Unassigned | Random forest and histogram gradient boosting receive as-of rolling evaluation with prior out-of-fold sigmoid calibration, matched seasonal-climatology comparison, source-window bootstrap intervals, checksum/versioned artifacts, and a withheld publication decision |
+| T9.7 | Add Tamil/English language selection | P4 | T5.5 | Done | Unassigned | Tamil/English switch, persisted preference, offline English shell, localized manifest, UI catalog and dynamic-label patterns, and bilingual route/accessibility checks |
+| T9.8 | Compare multiple weather providers | P4 | T6.1 | Done | Unassigned | Checksum-verified 2015–2025 NASA POWER hourly data is compared with stored ERA5 for coverage, disagreement, missingness, UTC alignment sensitivity, and matched 2022–2024 baseline-evaluation impact; no publication gate is changed |
+
+## Design refresh — Google Stitch research dashboard
+
+The attached Stitch mockup is a visual reference. Existing Karuvottam read models,
+scientific guardrails, Tamil content, and no-data behavior remain authoritative.
+
+| ID | Task | Priority | Depends on | Status | Owner | Done when |
+|---|---|---:|---|---|---|---|
+| D1 | Establish the evidence-first design system and application shell | P2 | T5.5 | Done | Unassigned | Shared color, type, spacing, navigation, focus, and responsive tokens reproduce the mockup direction without external runtime dependencies |
+| D2 | Rebuild the home status dashboard from live read-model data | P2 | D1 | Done | Unassigned | Seasonal hero, four evidence cards, advisory state, and trace metadata render real or explicit no-data values |
+| D3 | Add research-module navigation and cycle ledgers | P2 | D2 | Done | Unassigned | Existing calendar, prediction, observation, and event routes are discoverable through mockup-aligned modules and cycle summaries |
+| D4 | Apply the shared shell and component system to secondary pages | P3 | D1 | Done | Unassigned | Calendar, prediction, observations, events, climate, workspace, and admin pages share the new navigation and design language |
+| D5 | Complete visual, responsive, and accessibility regression QA | P2 | D1–D4 | Done | Unassigned | Automated UI checks pass and representative desktop/mobile browser renders are reviewed without overflow or fabricated data |
 
 ## Recommended next implementation sequence
 

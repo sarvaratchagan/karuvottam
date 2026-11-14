@@ -34,7 +34,7 @@ def test_backup_captures_wal_and_restores_without_overwriting_live_database(tmp_
         assert source.with_name(source.name + '-wal').exists()
         backup = create_backup(source, tmp_path / 'backups')
         metadata = verify_backup(backup)
-        assert metadata['schema_version'] == 7
+        assert metadata['schema_version'] == 9
         restored = restore_backup(backup, tmp_path / 'recovered.sqlite3')
         with sqlite3.connect(restored) as connection:
             assert connection.execute('SELECT name FROM locations').fetchone()[0] == 'வத்தலக்குண்டு'

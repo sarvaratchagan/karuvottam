@@ -6,16 +6,17 @@
     <title>நிர்வாக நிலை • கருவோட்டம்</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="research-page">
 <a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+{% from '_research_header.html' import research_header with context %}
+{{research_header('admin', 'நிர்வாக நிலை', 2026)}}
 <main class="wrap" id="main-content" tabindex="-1">
-    <header>
+    <header class="page-intro">
         <div>
             <div class="eyebrow">பாதுகாக்கப்பட்ட நிர்வாகப் பக்கம்</div>
             <h1>நிர்வாக நிலை</h1>
             <p>உள்நுழைந்தவர்: {{admin_username}}</p>
         </div>
-        <a href="/">முகப்புப் பக்கம் →</a>
     </header>
     <section class="grid" aria-label="நிர்வாகச் சேவை நிலை">
         <article class="card">
@@ -40,6 +41,26 @@
             <ul>{% for warning in dashboard.warnings %}<li>{{warning}}</li>{% endfor %}</ul>
         {% else %}<p>எச்சரிக்கை இல்லை.</p>{% endif %}
     </aside>
+    <section class="card" aria-label="அறிவிப்பு நிலை">
+        <h2>மின்னஞ்சல் / செய்தி அறிவிப்புகள்</h2>
+        {% if not notification_available %}
+            <p>அறிவிப்பு தரவுத்தளம் கிடைக்கவில்லை. Migration நிலையைச் சரிபார்க்கவும்.</p>
+        {% else %}
+            <p>செயலில் உள்ள விதிகள்: {{notification_rules | selectattr('enabled') | list | length}}</p>
+            {% if notification_deliveries %}
+                <ul>
+                {% for delivery in notification_deliveries %}
+                    <li>{{delivery.source}} · {{delivery.health}} · {{delivery.channel}} ·
+                        {{delivery.status}} · முயற்சிகள் {{delivery.attempt_count}}
+                        {% if delivery.last_error_code %} · {{delivery.last_error_code}}{% endif %}
+                        <small>#{{delivery.id}} · {{delivery.created_at}}</small>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}<p>அனுப்பல் பதிவுகள் இல்லை.</p>{% endif %}
+            <p class="foot">விதி அமைப்பு மற்றும் தோல்வி மீள்முயற்சி: <code>python -m karuvottam.notifications --help</code></p>
+        {% endif %}
+    </section>
 </main>
 </body>
 </html>

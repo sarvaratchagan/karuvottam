@@ -19,7 +19,7 @@ python3 -m venv .venv
 Set `KARUVOTTAM_DATABASE_PATH`, `KARUVOTTAM_LOG_PATH` and
 `KARUVOTTAM_WEATHER_RAW_DATA_DIR` to persistent, writable paths. Set location,
 timezone, calendar anchor and weather provider variables for the deployment.
-Keep `KARUVOTTAM_ADMIN_USERNAME`, `KARUVOTTAM_ADMIN_PASSWORD`, and any weather API
+Keep optional bootstrap `KARUVOTTAM_ADMIN_USERNAME`, `KARUVOTTAM_ADMIN_PASSWORD`, and any weather API
 key in an operator-owned environment file outside the repository; make it readable
 only by the service account. The [environment template](../.env.example) lists all
 settings. Use absolute paths in production. Ensure database, WAL, logs and raw
@@ -44,7 +44,7 @@ Adapt [`deploy/nginx.conf.example`](../deploy/nginx.conf.example): replace the
 domain and certificate paths, validate the nginx config, and enable it after the
 certificate is valid. It redirects HTTP to HTTPS, terminates TLS, forwards only to
 the loopback Gunicorn listener, limits request bodies, and sets HSTS. Expose only
-ports 80/443 at the firewall. Do not publish port 8000. HTTP Basic administrator
+ports 80/443 at the firewall. Do not publish port 8000. HTTP Basic account
 credentials must travel only over HTTPS. Configure certificate renewal and test a
 renewal before launch.
 
@@ -90,6 +90,8 @@ curl --head https://example.org/
    traceback or secret appears in responses or logs.
 7. Confirm liveness/readiness monitoring, logs, backup freshness, certificate
    renewal and alert recipients. Record the deployed revision and recovery contact.
+8. Check the [mobile install and offline flow](MOBILE_APP.md) through HTTPS; confirm
+   stale forecasts are never shown as current while offline.
 
 Rollback: stop the service, restore the prior compatible application revision and
 its verified database snapshot if migrations changed, rerun readiness and page

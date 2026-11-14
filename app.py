@@ -3,15 +3,18 @@ from dataclasses import dataclass
 from functools import wraps
 from os import environ
 from pathlib import Path
+import json
+import sqlite3
 
 import re
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from flask import Flask, Response, abort, g, has_request_context, make_response, render_template, request
+from flask import Flask, Response, abort, g, has_request_context, make_response, render_template, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 
 from config import PROJECT_ROOT, settings
+from karuvottam.accounts import AccountStore, Principal, ROLES
 from karuvottam.calendar_engine import CalendarRule
 from karuvottam.calendar_view import CalendarViewService
 from karuvottam.climate_context import ClimateContextService
@@ -28,11 +31,14 @@ from karuvottam.forecast_timeline import (
 )
 from karuvottam.health import database_is_ready
 from karuvottam.lunar_events import LunarEventEngine
+from karuvottam.localization import (language_control, selected_language,
+                                     translate_ui_text, translated_html)
+from karuvottam.notifications import NotificationStore
 from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
-from karuvottam.security import AdminAuthenticator, query_parameters_are_safe
+from karuvottam.security import AdminAuthenticator, basic_credentials, query_parameters_are_safe
 from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
     OpenMeteoHistoricalClient,
@@ -79,7 +85,9 @@ ADMIN_AUTHENTICATOR = AdminAuthenticator(
     settings.admin_username,
     settings.admin_password,
 )
+ACCOUNT_STORE = AccountStore(settings.database_path)
 DATA_ACCESS = DataAccess(settings.database_path)
+NOTIFICATION_STORE = NotificationStore(settings.database_path)
 WEATHER_QUALITY_VALIDATOR = WeatherQualityValidator()
 RESEARCH_SCORING_ENGINE = ResearchScoringEngine()
 RAIN_CATEGORY_ENGINE = RainCategoryEngine()
@@ -110,6 +118,7 @@ FORECAST_INPUT_SERVICE = StoredForecastInputService(
     source=f'{WEATHER_PROVIDER_SPEC.key}:{WEATHER_PROVIDER_SPEC.model}',
 )
 app.extensions['data_access'] = DATA_ACCESS
+app.extensions['notification_store'] = NOTIFICATION_STORE
 app.extensions['weather_provider_spec'] = WEATHER_PROVIDER_SPEC
 app.extensions['weather_client'] = WEATHER_CLIENT
 app.extensions['weather_quality_validator'] = WEATHER_QUALITY_VALIDATOR
@@ -121,6 +130,7 @@ app.extensions['weather_csv_service'] = WEATHER_CSV_SERVICE
 app.extensions['weather_ingestion_service'] = WEATHER_INGESTION_SERVICE
 app.extensions['forecast_input_service'] = FORECAST_INPUT_SERVICE
 app.extensions['admin_authenticator'] = ADMIN_AUTHENTICATOR
+app.extensions['account_store'] = ACCOUNT_STORE
 
 LOCATION_TIMEZONE = settings.timezone
 REFERENCE_MONTH, REFERENCE_DAY = settings.chithirai_reference_parts
@@ -320,12 +330,29 @@ def include_request_id(response: Response) -> Response:
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'no-referrer'
-    if request.path.startswith('/admin'):
+    if request.path.startswith(('/admin', '/workspace')):
         response.headers['Cache-Control'] = 'no-store'
+    if response.mimetype == 'text/html' and not response.direct_passthrough:
+        language = selected_language()
+        html = response.get_data(as_text=True)
+        if language == 'en':
+            html = translated_html(html)
+        html = html.replace('</body>', language_control(language) + '</body>', 1)
+        response.set_data(html)
+        response.headers['Content-Language'] = language
+        response.vary.add('Cookie')
+        if 'Cache-Control' not in response.headers:
+            response.headers['Cache-Control'] = 'private'
+        if request.args.get('lang') in ('ta', 'en'):
+            response.set_cookie('karuvottam_lang', language, max_age=31536000,
+                                samesite='Lax', secure=request.is_secure,
+                                httponly=True)
     return response
 
 
 def add_ui_notice(message: str) -> None:
+    if selected_language() == 'en':
+        message = translate_ui_text(message)
     existing = getattr(g, 'ui_notice', None)
     g.ui_notice = f'{existing} {message}' if existing else message
 
@@ -353,41 +380,66 @@ def _render_error(status_code: int, title: str, message: str):
     )
 
 
-def require_admin(view):
-    """Protect an administration view without cookie or session state."""
-    @wraps(view)
-    def protected_view(*args, **kwargs):
-        authenticator = app.extensions['admin_authenticator']
-        if not authenticator.enabled:
-            app.logger.warning(
-                'Disabled admin route requested request_id=%s path=%s',
-                g.request_id,
-                request.path,
-            )
-            return _render_error(
-                503,
-                'நிர்வாக அணுகல் அமைக்கப்படவில்லை',
-                'நிர்வாகச் சான்றுகளை சூழல் மாறிகளில் அமைக்கவும்.',
-            )
-        if not authenticator.authenticate(request.headers.get('Authorization')):
-            app.logger.warning(
-                'Admin authentication rejected request_id=%s path=%s',
-                g.request_id,
-                request.path,
-            )
-            response = _render_error(
-                401,
-                'நிர்வாக அங்கீகாரம் தேவை',
-                'செல்லுபடியாகும் நிர்வாகச் சான்றுகளை வழங்கவும்.',
-            )
-            response.headers['WWW-Authenticate'] = (
-                'Basic realm="Karuvottam administration", charset="UTF-8"'
-            )
-            return response
-        g.admin_username = authenticator.username
-        return view(*args, **kwargs)
+def require_role(*allowed_roles):
+    """Enforce authenticated account roles on privileged web routes."""
+    def decorator(view):
+        @wraps(view)
+        def protected_view(*args, **kwargs):
+            authenticator = app.extensions['admin_authenticator']
+            accounts = app.extensions['account_store']
+            credentials = basic_credentials(request.headers.get('Authorization'))
+            try:
+                account_count = accounts.count()
+            except (sqlite3.Error, OSError):
+                account_count = 0
+            if not authenticator.enabled and not account_count:
+                return _render_error(
+                    503,
+                    'நிர்வாக அணுகல் அமைக்கப்படவில்லை',
+                    'கணக்கு அல்லது நிர்வாகச் சான்றுகளை அமைக்கவும்.',
+                )
+            principal = None
+            if credentials is not None:
+                username, password = credentials
+                if (authenticator.enabled and username.lower() ==
+                        authenticator.username.encode('utf-8').lower()):
+                    if authenticator.authenticate(request.headers.get('Authorization')):
+                        principal = Principal(authenticator.username, 'admin', 'environment')
+                else:
+                    try:
+                        principal = accounts.authenticate(username, password)
+                    except (sqlite3.Error, OSError):
+                        principal = None
+            if principal is None:
+                app.logger.warning(
+                    'Account authentication rejected request_id=%s path=%s',
+                    g.request_id,
+                    request.path,
+                )
+                response = _render_error(
+                    401,
+                    'நிர்வாக அங்கீகாரம் தேவை',
+                    'செல்லுபடியாகும் நிர்வாகச் சான்றுகளை வழங்கவும்.',
+                )
+                response.headers['WWW-Authenticate'] = (
+                    'Basic realm="Karuvottam workspace", charset="UTF-8"'
+                )
+                return response
+            if principal.role not in allowed_roles:
+                return _render_error(
+                    403, 'அனுமதி இல்லை',
+                    'இந்தப் பக்கத்தைப் பார்க்க உங்கள் பங்கிற்கு அனுமதி இல்லை.',
+                )
+            g.principal = principal
+            g.admin_username = principal.username
+            return view(*args, **kwargs)
 
-    return protected_view
+        return protected_view
+    return decorator
+
+
+def require_admin(view):
+    return require_role('admin')(view)
 
 
 @app.errorhandler(DataAccessError)
@@ -567,6 +619,34 @@ def quality_tamil(value):
     return ' + '.join(labels.get(part, part) for part in value.split('+'))
 
 
+@app.get('/manifest.webmanifest')
+def web_manifest():
+    if selected_language() == 'en':
+        manifest = json.loads((Path(app.static_folder) / 'manifest.webmanifest').read_text())
+        manifest.update(name='Karuvottam — Rain research',
+                        short_name='Karuvottam',
+                        description='Karuvottam periods, weather data, and rain research',
+                        lang='en')
+        response = Response(json.dumps(manifest, ensure_ascii=False),
+                            mimetype='application/manifest+json')
+        response.headers['Cache-Control'] = 'private, max-age=3600'
+        response.vary.add('Cookie')
+        response.headers['Content-Language'] = 'en'
+        return response
+    response = send_from_directory(app.static_folder, 'manifest.webmanifest',
+                                   mimetype='application/manifest+json')
+    response.headers['Cache-Control'] = 'public, max-age=3600'
+    return response
+
+
+@app.get('/service-worker.js')
+def service_worker():
+    response = send_from_directory(app.static_folder, 'service-worker.js',
+                                   mimetype='text/javascript')
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
+
 @app.get('/health/live')
 def health_live():
     return {'status': 'ok'}
@@ -615,6 +695,14 @@ def index():
 @require_admin
 def admin_dashboard():
     dashboard = STATUS_DASHBOARD_SERVICE.build()
+    try:
+        notification_rules = NOTIFICATION_STORE.rules()
+        notification_deliveries = NOTIFICATION_STORE.deliveries(20)
+        notification_available = True
+    except (sqlite3.Error, OSError):
+        notification_rules = []
+        notification_deliveries = []
+        notification_available = False
     return render_template(
         'admin.html',
         dashboard=dashboard,
@@ -622,7 +710,40 @@ def admin_dashboard():
         provider_key=WEATHER_PROVIDER_SPEC.key,
         provider_model=WEATHER_PROVIDER_SPEC.model,
         api_key_configured=settings.weather_api_key is not None,
+        notification_rules=notification_rules,
+        notification_deliveries=notification_deliveries,
+        notification_available=notification_available,
     )
+
+
+@app.get('/workspace')
+@require_role(*ROLES)
+def account_workspace():
+    return render_template('workspace.html', section='home', principal=g.principal)
+
+
+@app.get('/workspace/research')
+@require_role('admin', 'researcher')
+def research_workspace():
+    dashboard = STATUS_DASHBOARD_SERVICE.build()
+    return render_template('workspace.html', section='research',
+                           principal=g.principal, dashboard=dashboard)
+
+
+@app.get('/workspace/data')
+@require_role('admin', 'data-maintainer')
+def data_workspace():
+    statuses = SOURCE_MONITOR_STORE.statuses()
+    return render_template('workspace.html', section='data',
+                           principal=g.principal, source_statuses=statuses)
+
+
+@app.get('/workspace/accounts')
+@require_role('admin')
+def accounts_workspace():
+    return render_template('workspace.html', section='accounts',
+                           principal=g.principal,
+                           accounts=app.extensions['account_store'].list_accounts())
 
 @app.route('/prediction')
 def prediction():

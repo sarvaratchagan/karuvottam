@@ -76,6 +76,13 @@ Migration `007_station_sensors.sql` adds station metadata, checksum-addressed
 import batches, and per-reading links to normalized weather observations. See
 [station and IoT observations](SENSOR_DATA.md) for the input contract.
 
+Migration `008_notifications.sql` adds opt-in alert rules, source-health transition
+state and a durable delivery queue with retry status. See
+[notifications](NOTIFICATIONS.md) for setup and scheduling.
+
+Migration `009_user_accounts.sql` adds account identities, role assignments,
+enabled state and salted password hashes. See [user accounts](USER_ACCOUNTS.md).
+
 Weather observations enforce the project identity key:
 
 `location_id + observed_at_utc + source`

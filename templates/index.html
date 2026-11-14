@@ -3,161 +3,169 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>துல்லிய மழை முன்னறிவிப்பு திட்டம்</title>
+    <meta name="theme-color" content="#1b4332">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192" type="image/png">
+    <script src="/static/pwa.js" defer></script>
+    <title>கருவோட்டம் | மழை ஆய்வு தளம்</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="research-page home-page">
 <a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
-<main class="wrap" id="main-content" tabindex="-1">
-    <header>
-        <div>
-            <div class="eyebrow">கருவோட்டம் • MVP</div>
-            <h1>தன்னியக்க துல்லிய மழை முன்னறிவிப்பு திட்டம்</h1>
-            <p>ஆடி 18 நாள் → 180 நாள் | மார்கழி 11 நாள் → 140 நாள்</p></div>
-        <form method="get" aria-label="இடம் மற்றும் ஆண்டு தேர்வு">
-            <label for="home-location">இடம்</label>
-            <select id="home-location" name="location">
-                {% for place in active_locations %}<option value="{{place.id}}" {% if selected_location.location and place.id == selected_location.location.id %}selected{% endif %}>{{place.name}}</option>{% endfor %}
-            </select>
-            <label for="home-year">ஆண்டு</label>
-            <input id="home-year" name="year" type="number" value="{{selected_year}}" min="2015" max="2100">
-            <button type="submit">காட்டு</button>
-        </form>
-    </header>
-    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
-    <nav class="page-nav" aria-label="முக்கிய பக்கங்கள்">
-        <a href="/calendar?year={{selected_year}}{{selected_location.query}}">கருவோட்டக் காலண்டர் மற்றும் விதிகளைப் பார்க்க →</a>
-        <a href="/observations?{{selected_location.query[1:]}}">வானிலைத் தரவை ஆய்வு செய்ய →</a>
-        <a href="/events?{{selected_location.query[1:]}}">ஒருங்கிணைந்த வானிலை நிகழ்வு ஆதார முகப்பு →</a>
-        <a href="/climate">IOD / ENSO பருவநிலைப் பின்னணி →</a>
-    </nav>
-    <section class="dashboard" aria-labelledby="dashboard-title">
-        <div class="section-heading">
-            <div>
-                <div class="eyebrow">நேரடி பயன்பாட்டு நிலை</div>
-                <h2 id="dashboard-title">நிலை முகப்புப் பலகை</h2>
-            </div>
-            <p class="foot">புதுப்பிக்கப்பட்டது: {{dashboard.checked_at_local.strftime('%d-%m-%Y %H:%M')}}</p>
-        </div>
-        <div class="status-grid">
-            <article class="status-card">
-                <span class="status-label">செயலில் உள்ள இடம்</span>
-                <h3>{{dashboard.location_name}}</h3>
-                <p>{{'%.6f'|format(dashboard.latitude)}}, {{'%.6f'|format(dashboard.longitude)}}</p>
-                <p class="foot">{{dashboard.timezone_name}}</p>
-                <span class="pill {{'pill-ok' if dashboard.location_record else 'pill-warning'}}">
-                    {{'தரவுத்தளத்தில் செயலில் உள்ளது' if dashboard.location_record else 'அமைப்பில் மட்டும் உள்ளது'}}
-                </span>
-            </article>
-            <article class="status-card">
-                <span class="status-label">கருவோட்டக் காலம்</span>
-                <h3>{{dashboard.window.window.season_name_tamil}} {{dashboard.window.window.season_year}}</h3>
-                <p>{{dashboard.window.window.start_datetime_local.strftime('%d-%m-%Y %H:%M')}} →<br>
-                    {{dashboard.window.window.end_datetime_local.strftime('%d-%m-%Y %H:%M')}}</p>
-                <span class="pill {{'pill-ok' if dashboard.window.state == 'active' else 'pill-info'}}">
-                    {{dashboard.window.state_tamil}}
-                </span>
-            </article>
-            <article class="status-card">
-                <span class="status-label">சமீபத்திய வானிலைத் தரவு</span>
-                {% if dashboard.latest_observation %}
-                    <h3>{{dashboard.latest_observation.observed_at_local|dashboard_datetime}}</h3>
-                    <p>{{dashboard.latest_observation.source}}</p>
-                    <span class="pill {{'pill-ok' if dashboard.latest_observation.quality_flag in ('valid', 'verified', 'calculated') else 'pill-warning'}}">
-                        தரம்: {{dashboard.latest_observation.quality_flag|quality_tamil}}
-                    </span>
-                {% else %}
-                    <h3>தரவு இல்லை</h3>
-                    <p>வானிலைப் பதிவுக்காகக் காத்திருக்கிறது.</p>
-                    <span class="pill pill-warning">தர நிலை கிடைக்கவில்லை</span>
-                {% endif %}
-            </article>
-            <article class="status-card">
-                <span class="status-label">கடைசி முன்னறிவிப்பு</span>
-                {% if dashboard.latest_forecast %}
-                    <h3>{{'ஆடி' if dashboard.latest_forecast.season_type == 'aadi' else 'மார்கழி'}} {{dashboard.latest_forecast.season_year}}</h3>
-                    <p>{{dashboard.latest_forecast.prediction_start}} → {{dashboard.latest_forecast.prediction_end}}</p>
-                    <p class="foot">உருவாக்கம்: {{(dashboard.latest_forecast.generated_at or dashboard.latest_forecast.created_at)|dashboard_datetime}}</p>
-                    <span class="pill {{'pill-ok' if dashboard.latest_forecast.status == 'validated' else 'pill-warning'}}">
-                        {{'சரிபார்க்கப்பட்டது' if dashboard.latest_forecast.status == 'validated' else 'ஆராய்ச்சி நிலை'}}
-                    </span>
-                {% else %}
-                    <h3>முன்னறிவிப்பு இல்லை</h3>
-                    <p>முதல் முன்னறிவிப்பு ஓட்டத்திற்காகக் காத்திருக்கிறது.</p>
-                    <span class="pill pill-warning">உருவாக்கப்படவில்லை</span>
-                {% endif %}
-            </article>
-        </div>
-        <aside class="warnings" aria-label="முக்கிய எச்சரிக்கைகள்" aria-live="polite">
-            <h3>முக்கிய எச்சரிக்கைகள்</h3>
-            {% if dashboard.warnings %}
-                <ul>
-                {% for warning in dashboard.warnings %}<li>{{warning}}</li>{% endfor %}
-                </ul>
-            {% else %}
-                <p>உடனடி நடவடிக்கை தேவைப்படும் எச்சரிக்கை இல்லை.</p>
-            {% endif %}
-        </aside>
+{% from '_research_header.html' import research_header with context %}
+{{research_header('home', 'முகப்பு', selected_year, show_controls=true, brand_heading=true)}}
+
+<main id="main-content" tabindex="-1">
+    {% if ui_notice %}<section class="home-notice" role="status"><p>{{ui_notice}}</p></section>{% endif %}
+
+    <section class="telemetry-strip" aria-label="ஆய்வு சூழல்">
+        <div><b>{{dashboard.location_name}}</b> <span>({{'%.4f'|format(dashboard.latitude)}}° N, {{'%.4f'|format(dashboard.longitude)}}° E)</span></div>
+        <div>ஆராய்ச்சி ஆண்டு: <b>{{selected_year}}</b></div>
+        <div><span class="state-dot"></span>{{dashboard.timezone_name}} · {{'தரவுத்தளம் தயார்' if dashboard.database_available else 'தரவுத்தளம் தயாராக இல்லை'}}</div>
     </section>
-    <section class="grid mb-25">
-        <article class="card"><span class="tag">ஆடி கருவோட்டம்</span>
-            <h2>18 நாட்கள்</h2>
-            <p>{{cycle.aadi_start_f}} → {{cycle.aadi_end_f}}</p>
-            <p class="foot">அரைத் திறந்த காலம் [தொடக்கம், முடிவு) • 432 மணி • விதி {{cycle.aadi_window.rule_version}}</p>
-            <div class="rule">மார்கழி கருவோட்டம் முடிந்த மறுநாள் முதல்</div>
-            <strong>180 நாட்கள்</strong>
-            <p>{{cycle.aadi_prediction_start_f}} → {{cycle.aadi_prediction_end_f}}</p><a
-                    href="/prediction?year={{selected_year}}&mode=aadi{{selected_location.query}}">180 நாள் முன்னறிவிப்பைப் பார்க்க →</a></article>
-        <article class="card"><span class="tag">மார்கழி கருவோட்டம்</span>
-            <h2>11 நாட்கள்</h2>
-            <p>{{cycle.margazhi_start_f}} → {{cycle.margazhi_end_f}}</p>
-            <p class="foot">அரைத் திறந்த காலம் [தொடக்கம், முடிவு) • 264 மணி • இரவு பகல் தொடர்ச்சி • விதி {{cycle.margazhi_window.rule_version}}</p>
-            <div class="rule">அடுத்த ஆண்டு ஆடி கருவோட்டம் முடிந்த மறுநாள் முதல்</div>
-            <strong>140 நாட்கள்</strong>
-            <p>{{cycle.margazhi_prediction_start_f}} → {{cycle.margazhi_prediction_end_f}}</p><a
-                    href="/prediction?year={{selected_year}}&mode=margazhi{{selected_location.query}}">140 நாள் முன்னறிவிப்பைப் பார்க்க →</a>
-        </article>
-    </section>
-    <section class="card mb-25">
-        <h2>கருவோட்டத் தூண்டுதல் கணக்கீடுகள்</h2>
-        {% if lunar_error %}
-            <p>{{lunar_error}}</p>
-        {% else %}
-            {% for entry in lunar_events %}
-                <div class="rule"><b>{{entry.month_name}}:</b> {{entry.event.event_type_tamil}} —
-                    {{entry.event.event_datetime_local.strftime('%d-%m-%Y %H:%M')}}
-                    ({{entry.event.source}} {{entry.event.calculation_version}})
+
+    <div class="research-canvas">
+        <section class="season-hero" aria-labelledby="season-title">
+            <div class="hero-copy">
+                <div class="hero-kicker">பருவநிலை சுழற்சி கண்காணிப்பு <span>Seasonal Cycle Tracking</span></div>
+                <h2 id="season-title">{{dashboard.window.window.season_name_tamil}} கருவோட்டச் சாளரம் · {{dashboard.window.window.season_year}}</h2>
+                <p class="hero-range">{{dashboard.window.window.start_datetime_local.strftime('%d-%m-%Y %H:%M')}} முதல் {{dashboard.window.window.end_datetime_local.strftime('%d-%m-%Y %H:%M')}} வரை</p>
+                <div class="hero-trace">
+                    <span>விதி {{dashboard.window.window.rule_version}}</span>
+                    <span>{{dashboard.window.window.duration_hours|int}} மணி நேரச் சாளரம்</span>
+                    <span>{{dashboard.window.window.trigger_event.event_type_tamil}}</span>
                 </div>
-            {% endfor %}
-        {% endif %}
-        <p class="foot">ஆடி 1 (சூன் 21) தொடங்கிய பின் முதலில் வரும் அமாவாசை/பௌர்ணமி நிகழ்வு நேரமே ஆடி தொடக்கம்.
-            மார்கழியில் {{cycle.margazhi_window.trigger_event.event_type_tamil}} தேர்ந்தெடுக்கப்பட்டுள்ளது; அமாவாசை மற்றும்
-            பௌர்ணமி ஆண்டுதோறும் மாறி மாறி பயன்படுத்தப்படும்.</p>
-    </section>
-    <section class="card"><h2>ஆண்டு சுழற்சி</h2>
-        <div class="timeline">
-            <div>ஆடி<br><b>18 நாள் தரவு</b></div>
-            <i>→</i>
-            <div>மார்கழி முடிவு<br><b>மறுநாள்</b></div>
-            <i>→</i>
-            <div><b>180 நாள்</b><br>முன்னறிவிப்பு</div>
-        </div>
-        <div class="timeline second">
-            <div>மார்கழி<br><b>11 நாள் தரவு</b></div>
-            <i>→</i>
-            <div>அடுத்த ஆண்டு ஆடி முடிவு<br><b>மறுநாள்</b></div>
-            <i>→</i>
-            <div><b>140 நாள்</b><br>முன்னறிவிப்பு</div>
-        </div>
-    </section>
-    <section class="notice"><b>குறிப்பு:</b> இது MVP கணிமுறை முன்மாதிரி. கருவோட்டத் தொடக்க நேரங்கள் தேர்ந்தெடுக்கப்பட்ட
-        சந்திர நிகழ்வின் துல்லிய நேரத்திலிருந்து நேரடியாகக் கணக்கிடப்படுகின்றன. மார்கழி கண்காணிப்பு 11 நாட்கள் இரவு பகல்
-        பாராமல் தொடர்கிறது. முன்னறிவிப்பு மதிப்புகள் தற்போது விளக்கக் காட்சிக்கானவை.
-    </section>
-    <section class="notice"><b>தனிப்பயன் நாட்காட்டி விதி:</b>
-        {{calendar_rule.reference_label}} = சித்திரை 1; விதிப் பதிப்பு {{calendar_rule.version}}.
-        இது இந்தத் திட்டத்தின் கணக்கீட்டு விதி மட்டுமே; அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல.
-    </section>
+            </div>
+            <aside class="hero-state">
+                <span class="status-chip {{'verified' if dashboard.window.state == 'active' else 'pending'}}"><i></i>{{dashboard.window.state_tamil}}</span>
+                <small>சாளர நிலை / Window status</small>
+                <strong>{{'செயலில்' if dashboard.window.state == 'active' else 'வரவிருக்கும்'}}</strong>
+                <span>{{dashboard.window.window.season_name_tamil}} · {{dashboard.window.window.season_year}}</span>
+            </aside>
+            <div class="cycle-progress" aria-label="ஆண்டு சுழற்சி">
+                <div class="cycle-labels"><span>ஆடி சுழற்சி</span><span>இடைப்பட்ட அவதானிப்பு கட்டம்</span><span>மார்கழி சுழற்சி</span></div>
+                <div class="cycle-bar"><i></i><i></i><i></i></div>
+            </div>
+        </section>
+
+        <section class="dashboard" aria-labelledby="dashboard-title">
+            <div class="section-heading research-heading">
+                <div>
+                    <div class="eyebrow">Scientific baseline summary</div>
+                    <h2 id="dashboard-title">முக்கிய ஆய்வக அளவீடுகள் · நிலை முகப்புப் பலகை</h2>
+                    <p>கணக்கிடப்பட்ட சாளரம், சேமிக்கப்பட்ட வானிலைத் தரவு மற்றும் ஆய்வு வெளியீடுகளின் நிலை.</p>
+                </div>
+                <p class="source-line">மறுஆய்வு: {{dashboard.checked_at_local.strftime('%H:%M')}} IST</p>
+            </div>
+
+            <div class="status-grid research-status-grid">
+                <article class="status-card research-card">
+                    <div class="metric-heading"><span>செயலில் உள்ள இடம்</span><b aria-hidden="true">⌖</b></div>
+                    <small>Location &amp; topography</small>
+                    <h3>{{dashboard.location_name}}</h3>
+                    <p class="metric-value">{{'%.4f'|format(dashboard.latitude)}}° N, {{'%.4f'|format(dashboard.longitude)}}° E</p>
+                    <dl class="metric-list">
+                        <div><dt>நேர மண்டலம்</dt><dd>{{dashboard.timezone_name}}</dd></div>
+                        <div><dt>பதிவு</dt><dd>{{'செயலில் உள்ளது' if dashboard.location_record else 'அமைப்பில் மட்டும்'}}</dd></div>
+                        {% if dashboard.location_record and dashboard.location_record.elevation_m is not none %}<div><dt>உயரம்</dt><dd>{{dashboard.location_record.elevation_m}} மீ</dd></div>{% endif %}
+                    </dl>
+                    <span class="status-chip {{'verified' if dashboard.location_record else 'pending'}}"><i></i>{{'சரிபார்க்கப்பட்டது' if dashboard.location_record else 'சேமிப்பு நிலுவை'}}</span>
+                </article>
+
+                <article class="status-card research-card">
+                    <div class="metric-heading"><span>கருவோட்டக் காலம்</span><b aria-hidden="true">◐</b></div>
+                    <small>Lunar synchrony &amp; astro trace</small>
+                    <h3>{{dashboard.window.window.trigger_event.event_type_tamil}}</h3>
+                    <p class="metric-value">{{dashboard.window.window.duration_hours|int}} மணி</p>
+                    <dl class="metric-list">
+                        <div><dt>தொடக்கம்</dt><dd>{{dashboard.window.window.start_datetime_local.strftime('%d-%m-%Y %H:%M')}}</dd></div>
+                        <div><dt>மூலம்</dt><dd>{{dashboard.window.window.trigger_event.source}}</dd></div>
+                        <div><dt>கணக்கீடு</dt><dd>{{dashboard.window.window.trigger_event.calculation_version}}</dd></div>
+                    </dl>
+                    <span class="status-chip verified"><i></i>கணக்கிடப்பட்டது</span>
+                </article>
+
+                <article class="status-card research-card">
+                    <div class="metric-heading"><span>சமீபத்திய வானிலைத் தரவு</span><b aria-hidden="true">☂</b></div>
+                    <small>Stored weather observation</small>
+                    {% if dashboard.latest_observation %}
+                        <h3>{{dashboard.latest_observation.observed_at_local|dashboard_datetime}}</h3>
+                        <p class="metric-value">{{dashboard.latest_observation.temperature_c if dashboard.latest_observation.temperature_c is not none else '—'}}<span>{% if dashboard.latest_observation.temperature_c is not none %} °C{% endif %}</span></p>
+                        <dl class="metric-list">
+                            <div><dt>மழை</dt><dd>{{dashboard.latest_observation.precipitation_mm if dashboard.latest_observation.precipitation_mm is not none else '—'}}{% if dashboard.latest_observation.precipitation_mm is not none %} mm{% endif %}</dd></div>
+                            <div><dt>ஈரப்பதம்</dt><dd>{{dashboard.latest_observation.relative_humidity_pct if dashboard.latest_observation.relative_humidity_pct is not none else '—'}}{% if dashboard.latest_observation.relative_humidity_pct is not none %}%{% endif %}</dd></div>
+                            <div><dt>மூலம்</dt><dd>{{dashboard.latest_observation.source}}</dd></div>
+                        </dl>
+                        <span class="status-chip {{'verified' if dashboard.latest_observation.quality_flag in ('valid', 'verified', 'calculated') else 'pending'}}"><i></i>{{dashboard.latest_observation.quality_flag|quality_tamil}}</span>
+                    {% else %}
+                        <h3>தரவு இல்லை</h3>
+                        <p>வானிலைப் பதிவுக்காகக் காத்திருக்கிறது. கற்பனை மதிப்புகள் காட்டப்படாது.</p>
+                        <span class="status-chip pending"><i></i>தர நிலை கிடைக்கவில்லை</span>
+                    {% endif %}
+                </article>
+
+                <article class="status-card research-card">
+                    <div class="metric-heading"><span>கடைசி முன்னறிவிப்பு</span><b aria-hidden="true">⌁</b></div>
+                    <small>Algorithmic forecast run</small>
+                    {% if dashboard.latest_forecast %}
+                        <h3>{{'ஆடி' if dashboard.latest_forecast.season_type == 'aadi' else 'மார்கழி'}} {{dashboard.latest_forecast.season_year}}</h3>
+                        <p class="metric-value">{{dashboard.latest_forecast.status}}</p>
+                        <dl class="metric-list">
+                            <div><dt>காலம்</dt><dd>{{dashboard.latest_forecast.prediction_start}} → {{dashboard.latest_forecast.prediction_end}}</dd></div>
+                            <div><dt>மாதிரி</dt><dd>{{dashboard.latest_forecast.model_version}}</dd></div>
+                        </dl>
+                        <span class="status-chip {{'verified' if dashboard.latest_forecast.status == 'validated' else 'pending'}}"><i></i>{{'சரிபார்க்கப்பட்டது' if dashboard.latest_forecast.status == 'validated' else 'ஆராய்ச்சி நிலை'}}</span>
+                    {% else %}
+                        <h3>முன்னறிவிப்பு இல்லை</h3>
+                        <p>முதல் முன்னறிவிப்பு ஓட்டத்திற்காகக் காத்திருக்கிறது.</p>
+                        <span class="status-chip withheld"><i></i>வெளியீடு நிறுத்திவைப்பு</span>
+                    {% endif %}
+                </article>
+            </div>
+
+            <aside class="research-advisory" aria-label="ஆய்வு குறிப்பு மற்றும் எச்சரிக்கைகள்" aria-live="polite">
+                <span class="advisory-icon" aria-hidden="true">◇</span>
+                <div>
+                    <h3>ஆய்வு குறிப்பு மற்றும் முக்கிய எச்சரிக்கைகள் <span>Research advisory</span></h3>
+                    {% if dashboard.warnings %}<ul>{% for warning in dashboard.warnings %}<li>{{warning}}</li>{% endfor %}</ul>{% else %}<p>உடனடி நடவடிக்கை தேவைப்படும் பயன்பாட்டு எச்சரிக்கை இல்லை.</p>{% endif %}
+                    <p class="advisory-foot">இவை ஆராய்ச்சி வெளியீடுகள். அதிகாரப்பூர்வ வானிலை அல்லது அவசர எச்சரிக்கைகளுக்கு IMD அறிவிப்புகளைப் பயன்படுத்தவும்.</p>
+                </div>
+            </aside>
+        </section>
+
+        <section class="research-modules" aria-labelledby="modules-title">
+            <div class="section-heading research-heading">
+                <div><div class="eyebrow">Research modules</div><h2 id="modules-title">ஆராய்ச்சி தொகுதிகள் மற்றும் பகுப்பாய்வு</h2></div>
+                <span class="module-count">4 தொகுதிகள்</span>
+            </div>
+            <div class="module-grid">
+                <a class="module-card" href="/calendar?year={{selected_year}}{{selected_location.query}}"><span class="module-icon">▣</span><small>தொகுதி F2</small><h3>கருவோட்டக் காலண்டர்</h3><p>ஆடி மற்றும் மார்கழி சாளரங்கள், சந்திரத் தூண்டுதல் மற்றும் விதிப் பதிவேடு.</p><b>காலண்டரைத் திற →</b></a>
+                <a class="module-card" href="/prediction?year={{selected_year}}&mode=aadi{{selected_location.query}}"><span class="module-icon">▥</span><small>தொகுதி F3</small><h3>180 நாள் முன்னறிவிப்பு</h3><p>ஆதாரம், தரம் மற்றும் வெளியீட்டு நிலையைத் தெளிவாகக் காட்டும் ஆய்வுக் காலவரிசை.</p><b>ஆய்வைத் திற →</b></a>
+                <a class="module-card" href="/observations?{{selected_location.query[1:]}}"><span class="module-icon">⌁</span><small>தொகுதி F4</small><h3>அவதானிப்புத் தரவு</h3><p>சேமிக்கப்பட்ட மூலப் பதிவுகள், interpolation மற்றும் இடைவெளி ஆய்வு.</p><b>தரவை ஆய்வு செய் →</b></a>
+                <a class="module-card" href="/events?year={{selected_year}}{{selected_location.query}}"><span class="module-icon">◎</span><small>தொகுதி F5</small><h3>நிகழ்வு ஆதாரம்</h3><p>புயல் பாதைகள், இலக்கு இடத் தாக்கம் மற்றும் வரலாற்று மழை தொடர்புகள்.</p><b>நிகழ்வுகளைப் பார் →</b></a>
+            </div>
+        </section>
+
+        <section class="cycle-ledger" aria-labelledby="cycle-ledger-title">
+            <div class="section-heading research-heading"><div><div class="eyebrow">Season ledger</div><h2 id="cycle-ledger-title">{{selected_year}} கருவோட்டச் சுழற்சிகள்</h2></div></div>
+            <div class="grid cycle-grid">
+                <article class="cycle-card"><span class="tag">ஆடி கருவோட்டம்</span><h3>18 நாள் / 432 மணி</h3><p>{{cycle.aadi_start_f}} → {{cycle.aadi_end_f}}</p><dl class="metric-list"><div><dt>விதி</dt><dd>{{cycle.aadi_window.rule_version}}</dd></div><div><dt>இலக்கு</dt><dd>{{cycle.aadi_prediction_start_f}} → {{cycle.aadi_prediction_end_f}}</dd></div></dl><a href="/prediction?year={{selected_year}}&mode=aadi{{selected_location.query}}">180 நாள் வெளியீட்டைப் பார்க்க →</a></article>
+                <article class="cycle-card"><span class="tag">மார்கழி கருவோட்டம்</span><h3>11 நாள் / 264 மணி</h3><p>{{cycle.margazhi_start_f}} → {{cycle.margazhi_end_f}}</p><dl class="metric-list"><div><dt>விதி</dt><dd>{{cycle.margazhi_window.rule_version}}</dd></div><div><dt>இலக்கு</dt><dd>{{cycle.margazhi_prediction_start_f}} → {{cycle.margazhi_prediction_end_f}}</dd></div></dl><a href="/prediction?year={{selected_year}}&mode=margazhi{{selected_location.query}}">140 நாள் வெளியீட்டைப் பார்க்க →</a></article>
+            </div>
+        </section>
+
+        <section class="calculation-trace" aria-labelledby="trace-title">
+            <div><div class="eyebrow">Calculation trace</div><h2 id="trace-title">கருவோட்டத் தூண்டுதல் கணக்கீடுகள்</h2></div>
+            {% if lunar_error %}<p>{{lunar_error}}</p>{% else %}<div class="trace-grid">{% for entry in lunar_events %}<article><small>{{entry.month_name}}:</small><h3>{{entry.event.event_type_tamil}} — {{entry.event.event_datetime_local.strftime('%d-%m-%Y %H:%M')}}</h3><code>{{entry.event.source}} {{entry.event.calculation_version}}</code></article>{% endfor %}</div>{% endif %}
+            <p class="trace-note">ஆடி 1 (சூன் 21) தொடங்கிய பின் முதலில் வரும் அமாவாசை அல்லது பௌர்ணமி நிகழ்வு நேரமே ஆடி தொடக்கம். மார்கழியில் அமாவாசை மற்றும் பௌர்ணமி ஆண்டுதோறும் மாறி மாறி பயன்படுத்தப்படும். தனிப்பயன் நாட்காட்டி விதி: {{calendar_rule.reference_label}} = சித்திரை 1; விதிப் பதிப்பு {{calendar_rule.version}}. இது இந்தத் திட்டத்தின் கணக்கீட்டு விதி மட்டுமே; அதிகாரப்பூர்வ தமிழ் நாட்காட்டி அல்ல.</p>
+        </section>
+    </div>
 </main>
+
+<footer class="research-footer">
+    <div><b>கருவோட்டம் ஆராய்ச்சி தளம்</b><span>v2.4-research</span><p>மரபு மழை அவதானிப்பையும் நவீன வானிலை ஆதாரத்தையும் இணைக்கும் திறந்த ஆய்வுப் பதிவு.</p></div>
+    <div><span>ERA5 Reanalysis</span><span>IBTrACS</span><span>NOAA Climate</span><p>© {{selected_year}} Karuvottam research ledger</p></div>
+</footer>
 </body>
 </html>

@@ -11,6 +11,21 @@ from dataclasses import dataclass
 MAX_AUTHORIZATION_HEADER_BYTES = 1024
 
 
+def basic_credentials(authorization_header: str | None) -> tuple[bytes, bytes] | None:
+    """Decode a bounded Basic header without storing credentials in a session."""
+    if not authorization_header or len(authorization_header.encode('utf-8')) > MAX_AUTHORIZATION_HEADER_BYTES:
+        return None
+    try:
+        scheme, encoded = authorization_header.split(' ', maxsplit=1)
+        if scheme.lower() != 'basic' or not encoded:
+            return None
+        decoded = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    username, separator, password = decoded.partition(b':')
+    return (username, password) if separator else None
+
+
 @dataclass(frozen=True, repr=False)
 class AdminAuthenticator:
     """Validate one environment-configured administrator using HTTP Basic auth."""
@@ -23,23 +38,12 @@ class AdminAuthenticator:
         return self.username is not None and self.password is not None
 
     def authenticate(self, authorization_header: str | None) -> bool:
-        if not self.enabled or not authorization_header:
+        if not self.enabled:
             return False
-        if len(authorization_header.encode('utf-8')) > MAX_AUTHORIZATION_HEADER_BYTES:
+        credentials = basic_credentials(authorization_header)
+        if credentials is None:
             return False
-        try:
-            scheme, encoded = authorization_header.split(' ', maxsplit=1)
-        except ValueError:
-            return False
-        if scheme.lower() != 'basic' or not encoded:
-            return False
-        try:
-            decoded = base64.b64decode(encoded, validate=True)
-        except (ValueError, binascii.Error):
-            return False
-        supplied_username, separator, supplied_password = decoded.partition(b':')
-        if not separator:
-            return False
+        supplied_username, supplied_password = credentials
         expected_username = self.username.encode('utf-8')
         expected_password = self.password.encode('utf-8')
         username_matches = secrets.compare_digest(

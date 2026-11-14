@@ -192,6 +192,28 @@ def test_key_pages_have_accessible_tamil_document_structure(client, path):
     assert 'name="viewport"' in html
 
 
+@pytest.mark.parametrize('path', KEY_PAGES)
+def test_key_pages_have_accessible_english_document_structure(client, path):
+    separator = '&' if '?' in path else '?'
+    response = client.get(f'{path}{separator}lang=en')
+    html = response.get_data(as_text=True)
+    parser = AccessibilityAuditParser()
+    parser.feed(html)
+
+    assert response.status_code == 200
+    assert parser.html_lang == 'en'
+    assert parser.title_count == parser.h1_count == 1
+    assert ''.join(parser.title_text).strip()
+    assert ''.join(parser.h1_text).strip()
+    assert parser.main_ids == ['main-content']
+    assert parser.skip_targets == ['#main-content']
+    assert len(parser.ids) == len(set(parser.ids))
+    assert parser.unlabelled_controls == []
+    assert all(text.strip() for text in parser.button_text)
+    assert parser.caption_count == parser.table_count
+    assert parser.th_without_scope == parser.inaccessible_svgs == 0
+
+
 @pytest.mark.parametrize(
     ('path', 'expected_text'),
     [
@@ -249,3 +271,40 @@ def test_stylesheet_contains_keyboard_mobile_and_contrast_support(client):
     assert '.observation-table td::before' in css
     assert '@media (prefers-reduced-motion: reduce)' in css
     assert '@media (forced-colors: active)' in css
+
+
+@pytest.mark.parametrize(
+    ('path', 'active_label'),
+    [
+        ('/', 'முகப்பு'),
+        ('/calendar?year=2026', 'காலண்டர்'),
+        ('/prediction?year=2026&mode=aadi', 'முன்னறிவிப்பு'),
+        ('/observations', 'அவதானிப்புகள்'),
+        ('/events?year=2025', 'நிகழ்வுகள்'),
+        ('/climate', 'காலநிலை'),
+    ],
+)
+def test_public_pages_use_shared_research_shell(client, path, active_label):
+    html = client.get(path).get_data(as_text=True)
+    shell_navigation = re.search(
+        r'<nav class="research-nav".*?</nav>', html, re.DOTALL
+    )
+
+    assert 'class="research-page' in html
+    assert 'class="research-header"' in html
+    assert 'aria-label="முக்கிய பக்கங்கள்"' in html
+    assert f'aria-current="page">{active_label}</a>' in html
+    assert shell_navigation is not None
+    assert shell_navigation.group().count('aria-current="page"') == 1
+    assert 'cdn.tailwindcss.com' not in html
+    assert 'fonts.googleapis.com' not in html
+
+
+def test_research_shell_has_small_screen_and_reduced_motion_guards(client):
+    css = client.get('/static/style.css').get_data(as_text=True)
+
+    assert '.research-nav { overflow-x: auto' in css
+    assert '.research-page:not(.home-page) .wrap' in css
+    assert '.shell-context-control' in css
+    assert '@media(max-width:480px)' in css
+    assert '@media (prefers-reduced-motion: reduce)' in css

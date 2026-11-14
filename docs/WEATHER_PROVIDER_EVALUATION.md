@@ -150,3 +150,6 @@ Procurement நேரத்தில் அதிகாரப்பூர்வ 
   accumulation ஆகப் பதிவு செய்தல்.
 - T2.4: null/range/length/unit/grid/elevation quality checks சேர்த்தல்.
 - T6.1/T9.8: NASA POWER-ஐ independent comparison provider ஆகப் பயன்படுத்துதல்.
+
+T9.8 ஒப்பீடு செயல்படுத்தப்பட்டு 2015–2024 evaluation seasons-க்கு
+`docs/PROVIDER_COMPARISON.md`-இல் விளக்கப்பட்டுள்ளது.
