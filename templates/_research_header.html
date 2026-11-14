@@ -38,6 +38,7 @@
     <nav class="research-nav" aria-label="முக்கிய பக்கங்கள்">
         <a class="{{'active' if active_page == 'home' else ''}}" href="/?year={{year_value}}{{shell_location_query}}" {% if active_page == 'home' %}aria-current="page"{% endif %}>முகப்பு</a>
         <a class="{{'active' if active_page == 'calendar' else ''}}" href="/calendar?year={{year_value}}{{shell_location_query}}" {% if active_page == 'calendar' %}aria-current="page"{% endif %}>காலண்டர்</a>
+        <a class="{{'active' if active_page == 'sidhariyal-calendar' else ''}}" href="/sidhariyal-calendar?year={{year_value}}{{shell_location_query}}" {% if active_page == 'sidhariyal-calendar' %}aria-current="page"{% endif %}>மாத நாட்காட்டி</a>
         <a class="{{'active' if active_page == 'prediction' else ''}}" href="/prediction?year={{year_value}}&mode=aadi{{shell_location_query}}" {% if active_page == 'prediction' %}aria-current="page"{% endif %}>முன்னறிவிப்பு</a>
         <a class="{{'active' if active_page == 'observations' else ''}}" href="/observations{% if shell_location_query %}?{{shell_location_query[1:]}}{% endif %}" {% if active_page == 'observations' %}aria-current="page"{% endif %}>அவதானிப்புகள்</a>
         <a class="{{'active' if active_page == 'events' else ''}}" href="/events?year={{year_value}}{{shell_location_query}}" {% if active_page == 'events' %}aria-current="page"{% endif %}>நிகழ்வுகள்</a>

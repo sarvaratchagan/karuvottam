@@ -152,6 +152,8 @@ def test_real_2026_margazhi_window_uses_new_moon_for_11_days():
     window = WINDOW_ENGINE.generate('margazhi', 2026)
 
     assert window.trigger_event.event_type == 'new_moon'
+    assert window.start_datetime_local == window.trigger_event.event_datetime_local
+    assert window.start_datetime_local.date().isoformat() == '2026-12-09'
     assert window.start_datetime_local.date().year == 2026
     assert window.start_datetime_local.date().month == 12
     assert window.end_datetime_local - window.start_datetime_local == timedelta(days=11)

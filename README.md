@@ -108,6 +108,7 @@ python app.py
 
 - `/` — ஆண்டு தேர்வு மற்றும் கருவோட்டச் சுழற்சி
 - `/calendar?year=2026` — சந்திர நிகழ்வு, alternation, நேர எல்லை மற்றும் விதியுடன் கருவோட்டக் காலண்டர்
+- `/sidhariyal-calendar?year=2026&month=8` — சித்தறியல் தேதிகளுடன் மாத நாட்காட்டி; சூரிய உதயத் திதி, அமாவாசை/பௌர்ணமி, புலர்வு/சாய்வு மற்றும் உதயம்/அஸ்தமனம்; உறுதிப்படுத்திய 2026–2027 எல்லைகளிலிருந்து பிற ஆண்டுகளுக்குத் திட்டமிடப்பட்ட தேதிகள்
 - `/prediction?year=2026&mode=aadi` — ஆடி அடிப்படையிலான 180 நாள் காட்சி
 - `/prediction?year=2026&mode=margazhi` — மார்கழி அடிப்படையிலான 140 நாள் காட்சி
 - `/prediction.csv?year=2026&mode=aadi` — தினசரி traceability fields உடன் UTF-8 forecast CSV
@@ -186,6 +187,7 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [சூரிய உதயம்/நிலைபெறுதல் — பழைய v1 குறிப்பு](docs/SUNRISE_SPEC.md)
 - [கருவோட்டக் கண்காணிப்புக் காலச் சாளர விதி](docs/WINDOW_SPEC.md)
 - [கருவோட்டக் காலண்டர் காட்சி](docs/CALENDAR_VIEW.md)
+- [சித்தறியல் மாத நாட்காட்டி விதி மற்றும் வரம்புகள்](docs/SIDHARIYAL_MONTHLY_CALENDAR.md)
 - [வரலாற்று வானிலைத் தரவு வழங்குநர் மதிப்பீடு](docs/WEATHER_PROVIDER_EVALUATION.md)
 - [ERA5 weather client மற்றும் ingestion நடைமுறை](docs/WEATHER_INGESTION.md)
 - [Weather timestamp மற்றும் precipitation interval விதிகள்](docs/WEATHER_TIME_SPEC.md)

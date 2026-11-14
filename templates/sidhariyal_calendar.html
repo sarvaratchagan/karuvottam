@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#245f3d">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192" type="image/png">
+    <script src="/static/pwa.js" defer></script>
+    <script src="/static/sidhariyal-calendar.js" defer></script>
+    <title>{{calendar.month_name}} {{calendar.year}} · சித்தறியல் மாதக் காலண்டர்</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="research-page">
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+{% from '_research_header.html' import research_header with context %}
+{{research_header('sidhariyal-calendar', 'சித்தறியல் மாதக் காலண்டர்', selected_year)}}
+<main class="wrap" id="main-content" tabindex="-1">
+    <header class="page-intro sid-calendar-intro">
+        <div>
+            <div class="eyebrow">சித்தறியல் தேதிகளுடன்</div>
+            <h1>{{calendar.month_name}} {{calendar.year}}</h1>
+            <p>{{calendar.start.strftime('%d-%m-%Y')}} முதல் {{end_inclusive.strftime('%d-%m-%Y')}} வரை</p>
+        </div>
+        <form action="/sidhariyal-calendar" method="get" class="sid-calendar-form" aria-label="மாதம் மற்றும் ஆண்டு தேர்வு">
+            {% if selected_location.location %}<input type="hidden" name="location" value="{{selected_location.location.id}}">{% endif %}
+            <label for="sid-month">மாதம்</label>
+            <select id="sid-month" name="month">
+                {% for number, name in months %}<option value="{{number}}" {% if number == calendar.month %}selected{% endif %}>{{name}}</option>{% endfor %}
+            </select>
+            <label for="sid-year">ஆண்டு</label>
+            <input id="sid-year" type="number" name="year" min="2015" max="2100" value="{{calendar.year}}">
+            <button type="submit">காட்டு</button>
+        </form>
+    </header>
+
+    {% if ui_notice %}<section class="warnings" role="status"><p>{{ui_notice}}</p></section>{% endif %}
+    <div class="sid-calendar-toolbar">
+        {% if calendar.previous_year >= 2015 %}<a href="/sidhariyal-calendar?year={{calendar.previous_year}}&month={{calendar.previous_month}}{{selected_location.query}}" aria-label="முந்தைய மாதம்">← முந்தைய மாதம்</a>{% else %}<span></span>{% endif %}
+        {% if calendar.next_year <= 2100 %}<a href="/sidhariyal-calendar?year={{calendar.next_year}}&month={{calendar.next_month}}{{selected_location.query}}" aria-label="அடுத்த மாதம்">அடுத்த மாதம் →</a>{% endif %}
+    </div>
+
+    <section class="card sid-calendar-section" aria-label="{{calendar.month_name}} {{calendar.year}} மாத நாட்காட்டி">
+        <p class="sid-calendar-mobile-hint">சிறிய திரையில் நாட்காட்டியை இடது–வலமாக நகர்த்திப் பார்க்கலாம்.</p>
+        <div class="sid-calendar-legend" aria-label="நாட்காட்டிக் குறியீடுகள்">
+            <span><span aria-hidden="true">✦</span> கருவோட்டத் தொடக்கம்</span>
+            <span><span aria-hidden="true">◆</span> கருவோட்ட முடிவு</span>
+            <span><span aria-hidden="true">🌑</span> அமாவாசை</span>
+            <span><span aria-hidden="true">🌕</span> பௌர்ணமி</span>
+        </div>
+        <div class="sid-calendar-grid" role="table" aria-label="{{calendar.month_name}} {{calendar.year}} மாத நாட்கள்">
+            <div class="sid-calendar-weekdays" role="row">
+                {% for weekday in weekdays %}<div role="columnheader">{{weekday}}</div>{% endfor %}
+            </div>
+            {% for week in calendar.weeks %}
+                <div class="sid-calendar-week" role="row">
+                    {% for day in week %}
+                        {% if day %}
+                            {% set detail = almanac[day.gregorian] %}
+                            {% set markers = window_markers.get(day.gregorian, ()) %}
+                            <div class="sid-calendar-day {% if day.gregorian == today %}is-today{% endif %}" role="cell" {% if day.gregorian == today %}aria-current="date"{% endif %}>
+                                <div class="sid-card-face sid-card-front" data-sid-front>
+                                    <span class="sid-calendar-day-number">{{day.day}}</span>
+                                    <time class="sid-calendar-gregorian" datetime="{{day.gregorian.isoformat()}}">{{day.gregorian.strftime('%d %b %Y')}}</time>
+                                    <span class="sid-calendar-tithi">{{detail.tithi_label or 'திதி கிடைக்கவில்லை'}}</span>
+                                    {% for phase in detail.phases %}<span class="sid-calendar-phase"><span aria-hidden="true">{{'🌑' if phase.name == 'அமாவாசை' else '🌕'}}</span> {{phase.name}} · {{phase.instant.strftime('%H:%M')}}</span>{% endfor %}
+                                    {% for marker in markers %}<span class="sid-calendar-window sid-calendar-window-{{marker.boundary}}"><span aria-hidden="true">{{'✦' if marker.boundary == 'start' else '◆'}}</span> {{marker.label}} · {{marker.instant.strftime('%H:%M')}}</span>{% endfor %}
+                                    {% if day.gregorian == today %}<span class="sid-calendar-today">இன்று</span>{% endif %}
+                                    <button type="button" class="sid-flip-button" data-sid-open aria-expanded="false" aria-controls="sid-details-{{day.gregorian.isoformat()}}" aria-label="{{day.month_name}} {{day.day}} நேர விவரம் காண">நேர விவரம் ↻</button>
+                                </div>
+                                <div class="sid-card-face sid-card-back" id="sid-details-{{day.gregorian.isoformat()}}" data-sid-back hidden>
+                                    <b>{{day.month_name}} {{day.day}} · {{day.gregorian.strftime('%d %b')}}</b>
+                                    <span>{{detail.tithi_label or 'திதி கிடைக்கவில்லை'}}</span>
+                                    <span>திதி முடிவு: {{detail.tithi_end.strftime('%H:%M' if detail.tithi_end.date() == day.gregorian else '%d %b %H:%M') if detail.tithi_end else '—'}}</span>
+                                    <span>புலர்வு {{detail.dawn.strftime('%H:%M') if detail.dawn else '—'}} · சாய்வு {{detail.dusk.strftime('%H:%M') if detail.dusk else '—'}}</span>
+                                    <span>உதயம் {{detail.sunrise.strftime('%H:%M') if detail.sunrise else '—'}} · அஸ்தமனம் {{detail.sunset.strftime('%H:%M') if detail.sunset else '—'}}</span>
+                                    {% for marker in markers %}<span>{{marker.label}}: {{marker.instant.strftime('%d-%m-%Y %H:%M')}}{% if marker.boundary == 'end' %} (முடிவு சேர்க்கப்படாது){% endif %}</span>{% endfor %}
+                                    <button type="button" class="sid-flip-button" data-sid-close aria-label="{{day.month_name}} {{day.day}} காலண்டர் முகப்பிற்குத் திரும்பு">திரும்பு ↻</button>
+                                </div>
+                            </div>
+                        {% else %}<div class="sid-calendar-blank" role="cell" aria-label="காலியான நாள்"></div>{% endif %}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="card sid-calendar-source">
+        <h2>தேதி விதி மற்றும் மூலம்</h2>
+        <p>இந்த மாதத் தேதிகள் <a href="https://sidhariyal.org/sidhariyalmonthycalendar" rel="noopener noreferrer">சித்தறியல் பொது மாதக் காலண்டரில்</a> 2026, 2027 ஆண்டுகளுக்கு வெளியிடப்பட்ட மாதத் தொடக்கங்களுடன் ஒப்பிடப்பட்டவை. {% if calendar.verified %}இந்த ஆண்டு மாதத் தொடக்கங்கள் சரிபார்க்கப்பட்டுள்ளன.{% else %}இந்த ஆண்டுக்கான தேதிகள் அதே மாதத் தொடக்க முறையின் கணிப்பு; தளத்தின் எதிர்காலக் கணக்கீடு வெளியிடப்படாததால் துல்லிய ஒற்றுமை உறுதி செய்யப்படவில்லை.{% endif %}</p>
+        <p>திதி என்பது தேர்ந்தெடுத்த இடத்தின் சூரிய உதய நேரத்தில் உள்ள புவிமையச் சந்திர–சூரிய கோணத்தின் 12° பிரிவு. திதி முடிவும் அமாவாசை/பௌர்ணமி நேரமும் அதே வானியல் மாதிரியில் கணக்கிடப்பட்டவை. புலர்வு/சாய்வு சூரிய மையம் அடிவானத்திற்குக் கீழே 6° இருக்கும் நேரங்கள்; உதயம்/அஸ்தமனம் தனியாகக் காட்டப்படுகின்றன. இவை தேர்ந்தெடுத்த இடம் ({{selected_location.name}}) மற்றும் {{selected_location.timezone_name}} நேரப்படி கணக்கிடப்பட்டவை. சித்தறியல் தளத்தின் திதி நேரங்களுடன் உறுதிப்படுத்தப்பட்ட ஒற்றுமை எனக் கருதக்கூடாது.</p>
+        <p>நட்சத்திரம், விரதம் மற்றும் விழா நேரங்கள் அவற்றின் தளக் கணக்கீட்டு விதி உறுதி செய்யப்படும் வரை காட்டப்படவில்லை. கருவோட்டக் கணக்கீட்டின் திட்ட நாட்காட்டி விதி தனியாகவே உள்ளது. <a href="/calendar?year={{calendar.year}}{{selected_location.query}}">கருவோட்டக் காலண்டரைப் பார்க்க</a>.</p>
+        <small>மாத விதி: {{rule_version}} · வானியல் மூலம்: {{almanac_source}} {{almanac_version}} · நேரங்கள் 24-மணி முறையில்</small>
+    </section>
+</main>
+</body>
+</html>

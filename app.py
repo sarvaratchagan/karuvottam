@@ -15,7 +15,9 @@ from werkzeug.exceptions import HTTPException
 
 from config import PROJECT_ROOT, settings
 from karuvottam.accounts import AccountStore, Principal, ROLES
-from karuvottam.calendar_engine import CalendarRule
+from karuvottam.calendar_engine import CalendarRule, TAMIL_MONTHS
+from karuvottam.calendar_almanac import CalendarAlmanac, SOURCE as ALMANAC_SOURCE, CALCULATION_VERSION as ALMANAC_VERSION
+from karuvottam.calendar_markers import markers_for_month
 from karuvottam.calendar_view import CalendarViewService
 from karuvottam.climate_context import ClimateContextService
 from karuvottam.data_access import DataAccess, DataAccessError, LocationRecord, LocationRulesRecord
@@ -38,6 +40,7 @@ from karuvottam.observation_inspection import ObservationInspectionService
 from karuvottam.probability_calibration import ProbabilityCalibrationEngine
 from karuvottam.rain_categories import RainCategoryEngine
 from karuvottam.research_scoring import ResearchScoringEngine
+from karuvottam.sidhariyal_calendar import SidhariyalCalendar, WEEKDAYS_TAMIL, RULE_VERSION as SIDHARIYAL_RULE_VERSION
 from karuvottam.security import AdminAuthenticator, basic_credentials, query_parameters_are_safe
 from karuvottam.status_dashboard import StatusDashboardService
 from karuvottam.weather_client import (
@@ -845,6 +848,46 @@ def calendar_view():
         'calendar.html',
         calendar=calendar,
         selected_year=year,
+    )
+
+
+@app.route('/sidhariyal-calendar')
+def sidhariyal_calendar_view():
+    today = date.today()
+    calendar_service = SidhariyalCalendar()
+    current = calendar_service.from_gregorian(today)
+    year = requested_year(current.year)
+    raw_month = request.args.get('month')
+    try:
+        month = int(raw_month) if raw_month is not None else (current.month if year == current.year else 1)
+        if not 1 <= month <= 12:
+            raise ValueError
+    except ValueError:
+        month = current.month if year == current.year else 1
+        add_ui_notice('மாதம் செல்லாது; இயல்புநிலை மாதம் காட்டப்படுகிறது.')
+    calendar = calendar_service.build(year, month)
+    profile = selected_location_profile()
+    elevation = (profile.location.elevation_m if profile.location and
+                 profile.location.elevation_m is not None else settings.elevation_m)
+    almanac = CalendarAlmanac(profile.latitude, profile.longitude, elevation,
+                               profile.timezone_name).build(calendar.start, calendar.end_exclusive)
+    window_markers = markers_for_month(profile.window_engine, calendar.start,
+                                       calendar.end_exclusive)
+    if window_markers.unavailable:
+        add_ui_notice('சில கருவோட்ட எல்லை நேரங்களை கணக்கிட முடியவில்லை.')
+    return render_template(
+        'sidhariyal_calendar.html',
+        calendar=calendar,
+        end_inclusive=calendar.end_exclusive - timedelta(days=1),
+        selected_year=year,
+        weekdays=WEEKDAYS_TAMIL,
+        months=tuple(enumerate(TAMIL_MONTHS, start=1)),
+        today=today,
+        almanac=almanac,
+        window_markers=window_markers.by_date,
+        almanac_source=ALMANAC_SOURCE,
+        almanac_version=ALMANAC_VERSION,
+        rule_version=SIDHARIYAL_RULE_VERSION,
     )
 
 

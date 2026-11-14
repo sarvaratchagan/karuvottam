@@ -125,6 +125,19 @@ Establish the historical data model and map before recent/live ingestion. T8.7 a
 | T9.7 | Add Tamil/English language selection | P4 | T5.5 | Done | Unassigned | Tamil/English switch, persisted preference, offline English shell, localized manifest, UI catalog and dynamic-label patterns, and bilingual route/accessibility checks |
 | T9.8 | Compare multiple weather providers | P4 | T6.1 | Done | Unassigned | Checksum-verified 2015–2025 NASA POWER hourly data is compared with stored ERA5 for coverage, disagreement, missingness, UTC alignment sensitivity, and matched 2022–2024 baseline-evaluation impact; no publication gate is changed |
 
+## Phase 10 — Sidhariyal monthly calendar
+
+The reference is the [public Sidhariyal monthly calendar](https://sidhariyal.org/sidhariyalmonthycalendar). Its date cells are visible, but its server-side calculation code is not. The new view must remain distinct from the project's established Karuvottam calendar and forecast rules.
+
+| ID | Task | Priority | Depends on | Status | Owner | Done when |
+|---|---|---:|---|---|---|---|
+| T10.1 | Inspect the public page and record date-boundary evidence | P2 | T1.2 | Done | Unassigned | Record the page's Sunday-first layout, selector and day-cell fields; compare all 12 published month starts in 2026 and 2027; document differences from the project's calendar and the unavailable server algorithm |
+| T10.2 | Build an automatically advancing Sidhariyal date read model | P2 | T10.1 | Done | Unassigned | Gregorian date conversion, month lengths, Sunday-first weeks, adjacent-month navigation, year rollover and 2015–2100 requests work without yearly manual data entry; unverified future dates are labelled as projections |
+| T10.3 | Render and verify the monthly calendar page | P2 | T10.2 | Done | Unassigned | Responsive monthly grid shows Sidhariyal and Gregorian dates, selectors, previous/next links, source and rule version; navigation links from the app; boundary and route tests pass |
+| T10.4 | Verify source-matched daily almanac details | P3 | T10.1, T10.5 | Open | Unassigned | Compare the independent tithi calculation with the site's convention; obtain reproducible, source-checked rules for nakshatra, fasts and festivals, including time zone and location; test against several published years before labelling any result as source-matched |
+| T10.5 | Show independently calculated daily lunar and daylight data | P2 | T10.3 | Done | Unassigned | Sunrise tithi and its ending time, exact new/full-moon events, civil dawn/dusk and sunrise/sunset are calculated for the selected location and time zone; the page distinguishes these from unverified Sidhariyal almanac values and handles unavailable daylight events |
+| T10.6 | Add interactive day details and event markers | P2 | T10.5, T1.5 | Done | Unassigned | Each date keeps a compact numbered sunrise tithi (for example, `1ம் வளர்பிறை`) and new/full-moon event badges visible without duplicate phase-day text, a keyboard-operable flip button reveals timing details, and selected-location Karuvottam start/end markers show exact local times with the exclusive end labelled; reduced-motion preference is respected |
+
 ## Design refresh — Google Stitch research dashboard
 
 The attached Stitch mockup is a visual reference. Existing Karuvottam read models,
@@ -140,18 +153,7 @@ scientific guardrails, Tamil content, and no-data behavior remain authoritative.
 
 ## Recommended next implementation sequence
 
-The stabilization, rule-engine, configuration, lunar, and observation-window tasks are complete. Continue in this order unless repository inspection reveals a blocker:
-
-1. T3.1 — Create the SQLite schema and migrations, including the new event-analysis tables.
-2. T3.2 — Create the data-access layer.
-3. T2.1 — Evaluate and select the historical weather provider.
-4. T2.2–T2.4 — Fetch, normalize, and quality-check hourly weather data.
-5. T2.5 — Add verified CSV import/export.
-6. T4.1–T4.3 — Build traceable experimental forecast output.
-7. T5.1–T5.5 — Deliver and verify the Tamil interface.
-8. T6.1–T6.4 — Assemble and backtest the historical dataset.
-9. T8.1–T8.2 — Establish the event model, historical archive, calculations, and track map before recent/live ingestion.
-10. T8.3–T8.8 — Add climate context, impact/rainfall analysis, freshness controls, dashboard, and evidence-gated combined-model validation.
+All planned Phase 0–9 and design-refresh implementation tasks are marked Done above. T10.4 remains for source-matched nakshatra, fast, festival and tithi conventions. T10.5 provides the requested astronomical tithi, moon phases, civil dawn/dusk and sunrise/sunset independently. The public site's server-side algorithm is not available in its delivered page code; [calendar method and limits](docs/SIDHARIYAL_MONTHLY_CALENDAR.md) records what is verified.
 
 ## MVP release checklist
 
