@@ -8,3 +8,7 @@ KARUVOTTAM_LOG_PATH=/opt/karuvottam/data/logs/karuvottam.log
 10 4 * * 1 cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor poll --source dmi
 25 4 * * 1 cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor poll --source oni
 0 5 * * * cd /opt/karuvottam && .venv/bin/python -m karuvottam.event_monitor check
+# Optional after configuring T9.3 rules/transports. Scan records transitions;
+# send-due retries failed deliveries with backoff. Monitor both command exits.
+*/15 * * * * cd /opt/karuvottam && .venv/bin/python -m karuvottam.notifications scan
+*/5 * * * * cd /opt/karuvottam && .venv/bin/python -m karuvottam.notifications send-due

@@ -2,22 +2,24 @@
 
 ## Protected administration page
 
-`/admin` is protected with HTTP Basic authentication. Credentials are read only
-from `KARUVOTTAM_ADMIN_USERNAME` and `KARUVOTTAM_ADMIN_PASSWORD`; they are never
-placed in Flask configuration, HTML, URLs, source control, or logs. Both values
-must be set together. The username accepts 1–64 ASCII letters, digits, `.`, `_`,
-or `-`; the password must be 16–256 UTF-8 bytes.
+`/admin` is protected with HTTP Basic authentication. The optional bootstrap
+credentials come from `KARUVOTTAM_ADMIN_USERNAME` and
+`KARUVOTTAM_ADMIN_PASSWORD`; they are never placed in Flask configuration,
+HTML, URLs, source control, or logs. Both values must be set together. The
+username accepts 1–64 ASCII letters, digits, `.`, `_`, or `-`; the password
+must be 16–256 UTF-8 bytes. Database-backed administrators can also access it.
 
-When credentials are absent, `/admin` is closed with HTTP 503 instead of using a
-default password. Missing or invalid credentials receive HTTP 401 and a Basic
+When no account or bootstrap credentials exist, `/admin` is closed with HTTP 503
+instead of using a default password. Missing or invalid credentials receive HTTP 401 and a Basic
 challenge. Comparisons use constant-time byte comparison. The authentication
 header is bounded and malformed Base64 is rejected. Administrator responses use
 `Cache-Control: no-store`.
 
 HTTP Basic credentials are only transport-safe behind HTTPS. Local development
 binds to `127.0.0.1`; production deployment must terminate HTTPS before exposing
-the route. T9.4 will replace this single-administrator boundary when user roles
-are introduced.
+the route. T9.4 extends this boundary with database accounts and roles; see
+[user accounts](USER_ACCOUNTS.md). The environment administrator remains a
+bootstrap login when configured.
 
 Example local request (do not put a real password in shell history):
 

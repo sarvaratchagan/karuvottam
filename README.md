@@ -14,7 +14,9 @@
 - classification, reliability மற்றும் rainfall-error metrics உடன் reproducible T6.3 அறிக்கைகள்
 - per-window as-of cutoffs உடன் expanding rolling-origin T6.4 validation
 - paired source-window bootstrap uncertainty உடன் evidence-scoped T6.5 findings summary
+- ERA5 / NASA POWER hourly provider ஒப்பீடு மற்றும் 2022–2024 baseline impact அறிக்கை
 - keyboard, screen-size மற்றும் semantic accessibility checks உடன் தமிழ்-first இடைமுகம்
+- தமிழ் / English மொழித் தேர்வு; தேர்வு அடுத்த பக்கங்களிலும் offline PWA-விலும் தொடரும்
 
 ## முக்கிய வரம்பு
 கருவோட்டத் தொடக்கங்கள் தேர்ந்தெடுக்கப்பட்ட சந்திர நிகழ்வின் துல்லிய உள்ளூர் நேரத்திலிருந்து நேரடியாக உருவாக்கப்படுகின்றன. 180/140 நாள் பக்கங்கள் தேர்ந்தெடுக்கப்பட்ட ஆண்டின் ஆடி/மார்கழி source window-க்கான சேமிக்கப்பட்ட `open-meteo:era5` hourly observations-ஐ வாசித்து experimental research score உருவாக்குகின்றன. 2015–2024 source windows உள்ளூர் reference database-ல் முழுமையாக உள்ளன. T6.3 fixed holdout, T6.4 rolling validation மற்றும் T6.5 paired uncertainty முடிவுகள் இந்த இடம்/தரவு/காலத்தில் Karuvottam-only/combined models seasonal climatology-ஐவிட கூடுதல் predictive value தருவதாக ஆதரிக்கவில்லை. இது மரபின் பொதுவான மறுப்பு அல்ல. Research score எதிர்கால தினசரி மழை அளவோ calibrated probability-யோ அல்ல; calibration publication gate கடக்காததால் probability/amount/rain category UI-ல் வெளியிடப்படாது.
@@ -110,7 +112,8 @@ python app.py
 - `/prediction?year=2026&mode=margazhi` — மார்கழி அடிப்படையிலான 140 நாள் காட்சி
 - `/prediction.csv?year=2026&mode=aadi` — தினசரி traceability fields உடன் UTF-8 forecast CSV
 - `/observations` — தேதி/source filters உடன் வானிலை நேரத் தொடர் மற்றும் gap ஆய்வு
-- `/admin` — environment credentials தேவைப்படும் பாதுகாக்கப்பட்ட நிர்வாக நிலைப் பக்கம்
+- `/admin` — environment bootstrap அல்லது தரவுத்தள admin கணக்கு தேவைப்படும் பாதுகாக்கப்பட்ட நிர்வாக நிலைப் பக்கம்
+- `/workspace` — பங்கு அடிப்படையில் பாதுகாக்கப்பட்ட பயனர் பணியிடம்
 - `/health/live` — WSGI உயிர்நிலைச் சோதனை
 - `/health/ready` — SQLite migration readiness சோதனை
 - `/events?year=2026` — வானிலை நிகழ்வு வரலாறு மற்றும் மூன்று தனித்தனி பாதை வகைகள்
@@ -215,3 +218,7 @@ table/SVG accessible names, தவறான உள்ளீடு, no-data fallb
 - [T8.8 இணைந்த மாதிரி வரலாற்றுச் சரிபார்ப்பு மற்றும் வெளியீட்டு முடிவு](docs/COMBINED_VALIDATION.md)
 - [T9.1 பல இடங்களுக்கான விதிகள், தரவு, கணிப்பு மற்றும் UI](docs/MULTI_LOCATION.md)
 - [T9.2 நிலையம் மற்றும் IoT உணர்கருவி மணிநேரத் தரவு](docs/SENSOR_DATA.md)
+- [T9.3 மின்னஞ்சல் மற்றும் செய்தி மூலநிலை அறிவிப்புகள்](docs/NOTIFICATIONS.md)
+- [T9.4 பயனர் கணக்குகள் மற்றும் பங்கு அனுமதிகள்](docs/USER_ACCOUNTS.md)
+- [T9.5 நிறுவக்கூடிய மொபைல் இணையப் பயன்பாடு மற்றும் offline நிலை](docs/MOBILE_APP.md)
+- [T9.6 மேம்பட்ட இயந்திரக் கற்றல் வரலாற்று மதிப்பீடு](docs/ADVANCED_ML_EVALUATION.md)

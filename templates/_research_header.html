@@ -1,0 +1,53 @@
+{% macro research_header(active_page, page_label, year_value, show_controls=false, brand_heading=false) -%}
+{% set shell_location = selected_location if selected_location is defined else none %}
+{% set shell_location_query = shell_location.query if shell_location else '' %}
+{% set shell_location_name = shell_location.name if shell_location else 'அமைக்கப்பட்ட ஆய்வு இடம்' %}
+{% set shell_timezone = shell_location.timezone_name if shell_location else 'Asia/Kolkata' %}
+<header class="research-header">
+    <div class="research-header-main">
+        <a class="brand" href="/?year={{year_value}}{{shell_location_query}}" aria-label="கருவோட்டம் முகப்பு">
+            <span class="brand-mark" aria-hidden="true">க</span>
+            <span>
+                <span class="brand-title-row">
+                    {% if brand_heading %}<h1>கருவோட்டம்</h1>{% else %}<span class="brand-name">கருவோட்டம்</span>{% endif %}
+                    <small>v2.4</small>
+                </span>
+                <span class="brand-subtitle">தன்னியக்க துல்லிய மழை முன்னறிவிப்பு திட்டம்</span>
+            </span>
+        </a>
+        <div class="pipeline-state"><span class="state-dot"></span>சேவை இயங்குகிறது <span>(Pipeline Active)</span></div>
+        {% if show_controls %}
+            <form class="header-controls" method="get" aria-label="இடம் மற்றும் ஆண்டு தேர்வு">
+                <label for="home-location"><span>ஆய்வு இடம்</span>
+                    <select id="home-location" name="location">
+                        {% for place in active_locations %}<option value="{{place.id}}" {% if shell_location and shell_location.location and place.id == shell_location.location.id %}selected{% endif %}>{{place.name}}</option>{% endfor %}
+                    </select>
+                </label>
+                <label for="home-year"><span>ஆய்வு ஆண்டு</span>
+                    <input id="home-year" name="year" type="number" value="{{year_value}}" min="2015" max="2100">
+                </label>
+                <button type="submit">காட்டு</button>
+            </form>
+        {% else %}
+            <div class="shell-context-control" aria-label="தற்போதைய ஆய்வு சூழல்">
+                <span><small>ஆய்வு இடம்</small><b>{{shell_location_name}}</b></span>
+                <span><small>ஆய்வு ஆண்டு</small><b>{{year_value}}</b></span>
+            </div>
+        {% endif %}
+    </div>
+    <nav class="research-nav" aria-label="முக்கிய பக்கங்கள்">
+        <a class="{{'active' if active_page == 'home' else ''}}" href="/?year={{year_value}}{{shell_location_query}}" {% if active_page == 'home' %}aria-current="page"{% endif %}>முகப்பு</a>
+        <a class="{{'active' if active_page == 'calendar' else ''}}" href="/calendar?year={{year_value}}{{shell_location_query}}" {% if active_page == 'calendar' %}aria-current="page"{% endif %}>காலண்டர்</a>
+        <a class="{{'active' if active_page == 'prediction' else ''}}" href="/prediction?year={{year_value}}&mode=aadi{{shell_location_query}}" {% if active_page == 'prediction' %}aria-current="page"{% endif %}>முன்னறிவிப்பு</a>
+        <a class="{{'active' if active_page == 'observations' else ''}}" href="/observations{% if shell_location_query %}?{{shell_location_query[1:]}}{% endif %}" {% if active_page == 'observations' %}aria-current="page"{% endif %}>அவதானிப்புகள்</a>
+        <a class="{{'active' if active_page == 'events' else ''}}" href="/events?year={{year_value}}{{shell_location_query}}" {% if active_page == 'events' %}aria-current="page"{% endif %}>நிகழ்வுகள்</a>
+        <a class="{{'active' if active_page == 'climate' else ''}}" href="/climate" {% if active_page == 'climate' %}aria-current="page"{% endif %}>காலநிலை</a>
+        <a class="{{'active' if active_page == 'workspace' else ''}}" href="/workspace" {% if active_page == 'workspace' %}aria-current="page"{% endif %}>பணியிடம்</a>
+        {% if active_page == 'admin' %}<a class="active" href="/admin" aria-current="page">நிர்வாகம்</a>{% endif %}
+    </nav>
+    <div class="research-context">
+        <span>கருவோட்டம் / {{page_label}}</span>
+        <span><span class="state-dot"></span>{{shell_location_name}} · {{shell_timezone}}</span>
+    </div>
+</header>
+{%- endmacro %}

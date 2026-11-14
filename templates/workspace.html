@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ta">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>பணியிடம் • கருவோட்டம்</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="research-page">
+<a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+{% from '_research_header.html' import research_header with context %}
+{{research_header('workspace', 'கணக்குப் பணியிடம்', 2026)}}
+<main class="wrap" id="main-content" tabindex="-1">
+    <header class="page-intro">
+        <div>
+            <div class="eyebrow">கணக்குப் பணியிடம்</div>
+            <h1>பணியிடம்</h1>
+            <p>{{ principal.username }} · {{ principal.role }}</p>
+        </div>
+    </header>
+    <nav aria-label="பணியிடப் பக்கங்கள்">
+        <a href="/workspace">பொது நிலை</a>
+        {% if principal.role in ('admin', 'researcher') %}<a href="/workspace/research">ஆய்வு</a>{% endif %}
+        {% if principal.role in ('admin', 'data-maintainer') %}<a href="/workspace/data">தரவு பராமரிப்பு</a>{% endif %}
+        {% if principal.role == 'admin' %}<a href="/workspace/accounts">கணக்குகள்</a> <a href="/admin">நிர்வாகம்</a>{% endif %}
+    </nav>
+    {% if section == 'home' %}
+    <section class="card"><h2>அணுகல் நிலை</h2>
+        <p>உங்கள் பங்கிற்கு அனுமதிக்கப்பட்ட பணியிடப் பக்கங்கள் மேலே உள்ளன.</p>
+        <p><a href="/prediction">மழைக் கணிப்பு</a> · <a href="/observations">கவனிப்பு தரவு</a></p>
+    </section>
+    {% elif section == 'research' %}
+    <section class="card"><h2>ஆய்வு ஆதாரங்கள்</h2>
+        <p>தரவுத்தள நிலை: {{ 'கிடைக்கிறது' if dashboard.database_available else 'கிடைக்கவில்லை' }}</p>
+        <p><a href="/events">நிகழ்வு ஆய்வு</a> · <a href="/climate">பருவநிலை பின்னணி</a> · <a href="/prediction.csv">கணிப்பு CSV</a></p>
+        {% if dashboard.warnings %}<ul>{% for warning in dashboard.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+    </section>
+    {% elif section == 'data' %}
+    <section class="card"><h2>தரவு மூல நிலை</h2>
+        <ul>{% for source in source_statuses %}<li>{{ source.source }}: {{ source.health }}{% if source.last_attempt_at %} · {{ source.last_attempt_at }}{% endif %}</li>{% endfor %}</ul>
+        <p><a href="/observations">கவனிப்பு தரவு</a> · <a href="/events">நிகழ்வு மூலங்கள்</a></p>
+    </section>
+    {% elif section == 'accounts' %}
+    <section class="card"><h2>கணக்குகள்</h2>
+        {% if accounts %}<ul>{% for account in accounts %}<li>{{ account.username }} · {{ account.role }} · {{ 'செயலில் உள்ளது' if account.enabled else 'முடக்கப்பட்டது' }}</li>{% endfor %}</ul>
+        {% else %}<p>தரவுத்தளக் கணக்குகள் இல்லை. சூழல் நிர்வாகக் கணக்கு மட்டும் இருக்கலாம்.</p>{% endif %}
+        <p class="foot">கணக்குகளைச் சேர்க்கவும் மாற்றவும்: <code>python -m karuvottam.accounts --help</code></p>
+    </section>
+    {% endif %}
+</main>
+</body>
+</html>

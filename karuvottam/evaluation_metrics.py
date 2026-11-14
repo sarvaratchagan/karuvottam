@@ -402,8 +402,12 @@ class BaselinePredictionReader:
 
 
 class EvaluationMetricsEngine:
-    def __init__(self, spec: EvaluationMetricSpec | None = None) -> None:
+    def __init__(self, spec: EvaluationMetricSpec | None = None,
+                 approaches: tuple[str, ...] = APPROACHES) -> None:
         self.spec = spec or EvaluationMetricSpec()
+        if not approaches or len(approaches) != len(set(approaches)):
+            raise ValueError('approaches must be nonempty and unique')
+        self.approaches = approaches
 
     def evaluate(
         self,
@@ -411,7 +415,7 @@ class EvaluationMetricsEngine:
     ) -> tuple[tuple[MetricRow, ...], tuple[ReliabilityRow, ...]]:
         metric_rows: list[MetricRow] = []
         reliability_rows: list[ReliabilityRow] = []
-        for approach in APPROACHES:
+        for approach in self.approaches:
             approach_rows = tuple(
                 item for item in predictions if item.approach == approach
             )

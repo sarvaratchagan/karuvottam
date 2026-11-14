@@ -21,6 +21,10 @@ EXPECTED_TABLES = {
     'weather_stations',
     'station_import_batches',
     'station_readings',
+    'notification_rules',
+    'notification_source_state',
+    'notification_deliveries',
+    'user_accounts',
     'prediction_runs',
     'predictions',
     'validation_results',
@@ -38,8 +42,8 @@ def test_initial_migration_creates_every_planned_table(tmp_path):
 
     result = migrate_database(database_path)
 
-    assert result.applied_versions == (1, 2, 3, 4, 5, 6, 7)
-    assert result.current_version == 7
+    assert result.applied_versions == (1, 2, 3, 4, 5, 6, 7, 8, 9)
+    assert result.current_version == 9
     with connect_database(database_path) as connection:
         tables = {
             row['name']
@@ -86,6 +90,16 @@ def test_initial_migration_creates_every_planned_table(tmp_path):
             'name': 'station_sensors',
             'checksum_length': 64,
         },
+        {
+            'version': 8,
+            'name': 'notifications',
+            'checksum_length': 64,
+        },
+        {
+            'version': 9,
+            'name': 'user_accounts',
+            'checksum_length': 64,
+        },
     ]
 
 
@@ -108,7 +122,7 @@ def test_migration_is_idempotent_and_data_survives_reopen(tmp_path):
         stored_name = connection.execute('SELECT name FROM locations').fetchone()['name']
 
     assert second_result.applied_versions == ()
-    assert second_result.current_version == 7
+    assert second_result.current_version == 9
     assert stored_name == 'Test location'
 
 

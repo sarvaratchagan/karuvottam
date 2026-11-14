@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "கருவோட்டம் — மழை ஆய்வு",
+  "short_name": "கருவோட்டம்",
+  "description": "கருவோட்டக் காலம், வானிலைத் தரவு மற்றும் மழை ஆய்வு",
+  "lang": "ta",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7f5",
+  "theme_color": "#245f3d",
+  "icons": [
+    {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

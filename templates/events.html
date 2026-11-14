@@ -3,14 +3,20 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#245f3d">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" href="/static/icons/icon-192.png" sizes="192x192" type="image/png">
+    <script src="/static/pwa.js" defer></script>
     <title>வானிலை நிகழ்வு ஆதார முகப்பு</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="research-page">
 <a class="skip-link" href="#main-content">முக்கிய உள்ளடக்கத்திற்குச் செல்ல</a>
+{% from '_research_header.html' import research_header with context %}
+{{research_header('events', 'வானிலை நிகழ்வு ஆதார முகப்பு', year)}}
 <main class="wrap" id="main-content" tabindex="-1">
-    <a class="back" href="/?{{selected_location.query[1:]}}">← முதற்பக்கம்</a>
-    <header class="event-header">
+    <header class="event-header page-intro">
         <div><div class="eyebrow">நிகழ்வு, உள்ளூர் ஆதாரம் மற்றும் ஆய்வு முடிவுகள்</div>
             <h1>வானிலை நிகழ்வுப் பாதைகள் · ஆதார முகப்பு</h1>
             <p>இலக்கு இடம்: {{target_name}}. நிகழ்வுப் பாதை, இலக்கிட நிலை, IOD/ENSO பின்னணி, வரலாற்று மழை மற்றும் மாதிரி ஒப்பீடு.</p></div>

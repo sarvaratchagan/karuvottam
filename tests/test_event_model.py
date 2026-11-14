@@ -167,7 +167,7 @@ def test_event_migration_preserves_legacy_bulletins(tmp_path):
              '2025-01-01T00:00:00Z', '2025-01-01T01:00:00Z', 'unknown'),
         )
     result = migrate_database(database)
-    assert result.applied_versions == (4, 5, 6, 7)
+    assert result.applied_versions == (4, 5, 6, 7, 8, 9)
     with DataAccess(database).transaction() as work:
         history = work.weather_events.history('legacy-source', 'old-key')
     assert len(history) == 1
