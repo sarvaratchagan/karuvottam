@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from app import app
-from karuvottam.calendar_almanac import CalendarAlmanac
+from karuvottam.calendar_almanac import CalendarAlmanac, sunrise_tithi_change
 
 
 def test_tithi_and_principal_phase_use_local_civil_date():
@@ -63,3 +63,27 @@ def test_phase_day_shows_event_badge_without_duplicate_day_label():
     assert '1ம் வளர்பிறை' in page
     assert 'கருவோட்டம் தொடக்கம் · 06:22' in page
     assert 'கருவோட்டம் முடிவு' in page
+
+
+def test_tithi_changes_detect_skips_repeats_and_cycle_wrap():
+    assert sunrise_tithi_change(7, 7) == (True, ())
+    assert sunrise_tithi_change(13, 15) == (False, ('15ம் வளர்பிறை',))
+    assert sunrise_tithi_change(29, 1) == (False, ('1ம் வளர்பிறை',))
+    assert sunrise_tithi_change(None, 1) == (False, ())
+
+
+def test_repeated_tithi_is_detected_on_first_day_of_solar_month():
+    target = date(2026, 7, 23)
+    detail = CalendarAlmanac(9.9, 77.9, 0, 'Asia/Kolkata').build(
+        target, target + timedelta(days=1))[target]
+    assert detail.tithi_label == '9ம் வளர்பிறை'
+    assert detail.repeated_tithi is True
+    assert detail.skipped_tithis == ()
+
+
+def test_skipped_tithi_is_identified_between_two_sunrises():
+    target = date(2026, 1, 8)
+    detail = CalendarAlmanac(9.9, 77.9, 0, 'Asia/Kolkata').build(
+        target, target + timedelta(days=1))[target]
+    assert detail.skipped_tithis == ('5ம் தேய்பிறை',)
+    assert detail.repeated_tithi is False

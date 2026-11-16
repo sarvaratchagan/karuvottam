@@ -33,10 +33,13 @@ class AlmanacDay:
     sunrise: datetime | None
     sunset: datetime | None
     dusk: datetime | None
+    tithi_slot: int | None
     tithi_number: int | None
     tithi_name: str | None
     paksha_name: str | None
     tithi_end: datetime | None
+    repeated_tithi: bool
+    skipped_tithis: tuple[str, ...]
     phases: tuple[LunarPhaseDetail, ...]
 
     @property
@@ -44,6 +47,24 @@ class AlmanacDay:
         if self.tithi_number is None or self.paksha_name is None:
             return None
         return f'{self.tithi_number}ம் {self.paksha_name}'
+
+
+def _slot_label(slot: int) -> str:
+    return f'{slot % 15 + 1}ம் {"வளர்பிறை" if slot < 15 else "தேய்பிறை"}'
+
+
+def sunrise_tithi_change(previous_slot: int | None,
+                        current_slot: int | None) -> tuple[bool, tuple[str, ...]]:
+    """Identify tithis repeated or skipped between consecutive sunrises."""
+    if previous_slot is None or current_slot is None:
+        return False, ()
+    if not 0 <= previous_slot < 30 or not 0 <= current_slot < 30:
+        raise ValueError('tithi slot must be between 0 and 29')
+    distance = (current_slot - previous_slot) % 30
+    if distance == 0:
+        return True, ()
+    return False, tuple(_slot_label((previous_slot + offset) % 30)
+                        for offset in range(1, distance))
 
 
 def _astro_time(instant: datetime) -> astronomy.Time:
@@ -78,9 +99,9 @@ class CalendarAlmanac:
         local = result.Utc().replace(tzinfo=timezone.utc).astimezone(self.zone)
         return local if local.date() == day else None
 
-    def _tithi(self, sunrise: datetime | None) -> tuple[int | None, str | None, str | None, datetime | None]:
+    def _tithi(self, sunrise: datetime | None) -> tuple[int | None, int | None, str | None, str | None, datetime | None]:
         if sunrise is None:
-            return None, None, None, None
+            return None, None, None, None, None
         angle = astronomy.MoonPhase(_astro_time(sunrise))
         slot = min(29, floor(angle / 12.0))
         paksha = 'வளர்பிறை' if slot < 15 else 'தேய்பிறை'
@@ -91,7 +112,7 @@ class CalendarAlmanac:
         boundary = astronomy.SearchMoonPhase(next_angle, _astro_time(sunrise), 3.0)
         end = (boundary.Utc().replace(tzinfo=timezone.utc).astimezone(self.zone)
                if boundary is not None else None)
-        return number, name, paksha, end
+        return slot, number, name, paksha, end
 
     def _phases(self, start: datetime, end: datetime) -> dict[date, list[LunarPhaseDetail]]:
         events: dict[date, list[LunarPhaseDetail]] = {}
@@ -116,14 +137,20 @@ class CalendarAlmanac:
         end_local = datetime.combine(end_exclusive, time.min, tzinfo=self.zone)
         phases = self._phases(start_local, end_local)
         details: dict[date, AlmanacDay] = {}
+        previous_sunrise = self._rise_set(start - timedelta(days=1), astronomy.Direction.Rise)
+        previous_slot = (min(29, floor(astronomy.MoonPhase(_astro_time(previous_sunrise)) / 12.0))
+                         if previous_sunrise is not None else None)
         day = start
         while day < end_exclusive:
             dawn = self._twilight(day, astronomy.Direction.Rise)
             sunrise = self._rise_set(day, astronomy.Direction.Rise)
             sunset = self._rise_set(day, astronomy.Direction.Set)
             dusk = self._twilight(day, astronomy.Direction.Set)
-            number, name, paksha, tithi_end = self._tithi(sunrise)
-            details[day] = AlmanacDay(day, dawn, sunrise, sunset, dusk, number, name, paksha,
-                                      tithi_end, tuple(phases.get(day, ())))
+            slot, number, name, paksha, tithi_end = self._tithi(sunrise)
+            repeated, skipped = sunrise_tithi_change(previous_slot, slot)
+            details[day] = AlmanacDay(day, dawn, sunrise, sunset, dusk, slot, number,
+                                      name, paksha, tithi_end, repeated, skipped,
+                                      tuple(phases.get(day, ())))
+            previous_slot = slot
             day += timedelta(days=1)
         return details

@@ -26,6 +26,7 @@ def test_month_grid_spans_week_and_year_boundaries():
     assert calendar.build(2026, 12).next_year == 2027
     assert calendar.build(2027, 1).previous_year == 2026
     assert calendar.build(2030, 8).verified is False
+    assert (calendar.build(2026, 4).end_exclusive - calendar.build(2026, 4).start).days == 32
 
 
 def test_month_page_shows_source_and_projection_notice():
